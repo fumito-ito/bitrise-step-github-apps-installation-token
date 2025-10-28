@@ -31,7 +31,35 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Shell-First Development (Principle I)**:
+- [ ] Implementation uses shell scripts (step.sh) as primary implementation language
+- [ ] External dependencies are minimal and justified
+- [ ] No complex language-specific tooling required
+
+**Bitrise Step Standards Compliance (Principle II)**:
+- [ ] step.yml defines all inputs/outputs according to Bitrise spec
+- [ ] Inputs accessed via environment variables
+- [ ] Outputs use envman for export
+- [ ] Metadata (title, summary, description) is complete and accurate
+
+**Secure Credential Handling (Principle III - NON-NEGOTIABLE)**:
+- [ ] Private keys/tokens passed via secure environment variables
+- [ ] No sensitive data logged to stdout/stderr
+- [ ] Temporary files with sensitive data have 0600 permissions
+- [ ] Cleanup of sensitive data on all exit paths
+- [ ] All GitHub API calls use HTTPS
+
+**Clear Input/Output Contract (Principle IV)**:
+- [ ] All required inputs validated at start
+- [ ] Validation failures exit with non-zero status
+- [ ] Error messages are actionable
+- [ ] Success confirmation provided
+
+**Error Handling & Exit Codes (Principle V)**:
+- [ ] Exit code 0 for success, non-zero for failure
+- [ ] set -e used for fail-fast behavior
+- [ ] Network/API/validation errors caught and reported
+- [ ] Cleanup actions run on failure
 
 ## Project Structure
 
