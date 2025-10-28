@@ -101,19 +101,19 @@ Bitrise steps use flat structure at repository root:
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Implement error message function for missing app_id in step.sh
-- [ ] T029 [US3] Implement error message function for non-numeric app_id in step.sh
-- [ ] T030 [US3] Implement error message function for missing installation_id in step.sh
-- [ ] T031 [US3] Implement error message function for non-numeric installation_id in step.sh
-- [ ] T032 [US3] Implement error message function for missing private_pem in step.sh
-- [ ] T033 [US3] Implement error message function for invalid PEM format in step.sh
-- [ ] T034 [US3] Implement network error handling with actionable message in step.sh
-- [ ] T035 [US3] Implement GitHub API error parsing (401, 404, 403, 422) with context in step.sh
-- [ ] T036 [US3] Implement rate limit / 503 error detection in step.sh
-- [ ] T037 [US3] Implement 5-second wait and single retry logic for 503/429 errors in step.sh
-- [ ] T038 [US3] Implement error message relay for API permission rejections (FR-018) in step.sh
-- [ ] T039 [US3] Implement envman export failure detection and error message in step.sh
-- [ ] T040 [US3] Add test workflows to bitrise.yml for error scenarios (missing inputs, invalid formats, etc.)
+- [x] T028 [US3] Implement error message function for missing app_id in step.sh
+- [x] T029 [US3] Implement error message function for non-numeric app_id in step.sh
+- [x] T030 [US3] Implement error message function for missing installation_id in step.sh
+- [x] T031 [US3] Implement error message function for non-numeric installation_id in step.sh
+- [x] T032 [US3] Implement error message function for missing private_pem in step.sh
+- [x] T033 [US3] Implement error message function for invalid PEM format in step.sh
+- [x] T034 [US3] Implement network error handling with actionable message in step.sh
+- [x] T035 [US3] Implement GitHub API error parsing (401, 404, 403, 422) with context in step.sh
+- [x] T036 [US3] Implement rate limit / 503 error detection in step.sh
+- [x] T037 [US3] Implement 5-second wait and single retry logic for 503/429 errors in step.sh
+- [x] T038 [US3] Implement error message relay for API permission rejections (FR-018) in step.sh
+- [x] T039 [US3] Implement envman export failure detection and error message in step.sh
+- [x] T040 [US3] Add test workflows to bitrise.yml for error scenarios (missing inputs, invalid formats, etc.)
 
 **Checkpoint**: All user stories should now be independently functional with comprehensive error handling
 

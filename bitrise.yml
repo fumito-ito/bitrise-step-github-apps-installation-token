@@ -109,6 +109,121 @@ workflows:
               echo "WARNING: Unexpected API response, but token was generated"
             fi
 
+  test-error-missing-app-id:
+    title: Test error handling - missing app_id
+    description: Verify clear error message when app_id is not provided
+    steps:
+    - change-workdir:
+        run_if: true
+        inputs:
+        - path: ./_tmp
+        - is_create_path: true
+    - path::./:
+        is_skippable: true
+        inputs:
+        - app_id: ""
+        - installation_id: "123456"
+        - private_pem: "fake-pem"
+    - script:
+        inputs:
+        - content: |
+            #!/bin/bash
+            # This should not run - previous step should fail
+            echo "ERROR: Step should have failed with missing app_id"
+            exit 1
+
+  test-error-invalid-app-id:
+    title: Test error handling - non-numeric app_id
+    description: Verify clear error message when app_id is not numeric
+    steps:
+    - change-workdir:
+        run_if: true
+        inputs:
+        - path: ./_tmp
+        - is_create_path: true
+    - path::./:
+        is_skippable: true
+        inputs:
+        - app_id: "not-a-number"
+        - installation_id: "123456"
+        - private_pem: "fake-pem"
+    - script:
+        inputs:
+        - content: |
+            #!/bin/bash
+            echo "ERROR: Step should have failed with non-numeric app_id"
+            exit 1
+
+  test-error-missing-installation-id:
+    title: Test error handling - missing installation_id
+    description: Verify clear error message when installation_id is not provided
+    steps:
+    - change-workdir:
+        run_if: true
+        inputs:
+        - path: ./_tmp
+        - is_create_path: true
+    - path::./:
+        is_skippable: true
+        inputs:
+        - app_id: "123456"
+        - installation_id: ""
+        - private_pem: "fake-pem"
+    - script:
+        inputs:
+        - content: |
+            #!/bin/bash
+            echo "ERROR: Step should have failed with missing installation_id"
+            exit 1
+
+  test-error-invalid-pem:
+    title: Test error handling - invalid PEM format
+    description: Verify clear error message when PEM is missing BEGIN/END markers
+    steps:
+    - change-workdir:
+        run_if: true
+        inputs:
+        - path: ./_tmp
+        - is_create_path: true
+    - path::./:
+        is_skippable: true
+        inputs:
+        - app_id: "123456"
+        - installation_id: "789012"
+        - private_pem: "this-is-not-a-valid-pem-key"
+    - script:
+        inputs:
+        - content: |
+            #!/bin/bash
+            echo "ERROR: Step should have failed with invalid PEM format"
+            exit 1
+
+  test-error-invalid-permissions-json:
+    title: Test error handling - invalid permissions JSON
+    description: Verify clear error message when permissions is not valid JSON
+    steps:
+    - change-workdir:
+        run_if: true
+        inputs:
+        - path: ./_tmp
+        - is_create_path: true
+    - path::./:
+        is_skippable: true
+        inputs:
+        - app_id: "123456"
+        - installation_id: "789012"
+        - private_pem: |
+            -----BEGIN RSA PRIVATE KEY-----
+            fake-key-content
+            -----END RSA PRIVATE KEY-----
+        - permissions: 'not-valid-json{bad'
+    - script:
+        inputs:
+        - content: |
+            #!/bin/bash
+            echo "ERROR: Step should have failed with invalid JSON permissions"
+            exit 1
+
   # ----------------------------------------------------------------
   # --- workflows to Share this step into a Step Library
   audit-this-step:
