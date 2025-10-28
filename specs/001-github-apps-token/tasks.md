@@ -26,11 +26,11 @@ Bitrise steps use flat structure at repository root:
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Update step.yml with correct title, summary, and description
-- [ ] T002 Define input parameters in step.yml (app_id, installation_id, private_pem, permissions)
-- [ ] T003 Define output parameter in step.yml (GITHUB_APPS_INSTALLATION_TOKEN)
-- [ ] T004 Update bitrise.yml with test workflow for valid credentials scenario
-- [ ] T005 Create .bitrise.secrets.yml template with placeholder credentials in README.md
+- [x] T001 Update step.yml with correct title, summary, and description
+- [x] T002 Define input parameters in step.yml (app_id, installation_id, private_pem, permissions)
+- [x] T003 Define output parameter in step.yml (GITHUB_APPS_INSTALLATION_TOKEN)
+- [x] T004 Update bitrise.yml with test workflow for valid credentials scenario
+- [x] T005 Create .bitrise.secrets.yml template with placeholder credentials in README.md
 
 ---
 

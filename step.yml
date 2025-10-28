@@ -8,11 +8,11 @@
 # - Bitrise CLI guides: http://devcenter.bitrise.io/bitrise-cli/
 
 title: |-
-  github-apps-installation-token
+  GitHub Apps Installation Token Generator
 summary: |
-  Create GitHub Apps Installation Token as your bitrise step
+  Generate GitHub Apps Installation Tokens for authenticating to GitHub APIs in your Bitrise workflows
 description: |
-  This step provides GitHub Apps Installation Token from your App's pem.
+  This step generates a GitHub Apps Installation Token by accepting your GitHub App ID, Installation ID, and private PEM key. The generated token is exported as GITHUB_APPS_INSTALLATION_TOKEN for use in subsequent workflow steps. Optionally supports custom permission scopes for least-privilege security.
 website: https://github.com/Nikkei/bitrise-step-github-apps-installation-token
 source_code_url: https://github.com/Nikkei/bitrise-step-github-apps-installation-token
 support_url: https://github.com/Nikkei/bitrise-step-github-apps-installation-token/issues
@@ -67,24 +67,60 @@ toolkit:
 
 
 inputs:
-  - example_step_input: Default Value - you can leave this empty if you want to
+  - app_id:
     opts:
-      title: "Example Step Input"
-      summary: Summary. No more than 2-3 sentences.
+      title: "GitHub App ID"
+      summary: "The unique ID of your GitHub App"
       description: |
-        Description of this input.
-
-        Can be Markdown formatted text.
-      is_expand: true
+        The numeric ID of your GitHub App. You can find this in your
+        GitHub App settings page under "About" → "App ID".
       is_required: true
-      value_options: []
+      is_sensitive: false
+  - installation_id:
+    opts:
+      title: "GitHub App Installation ID"
+      summary: "The ID of your app's installation"
+      description: |
+        The numeric ID of your GitHub App installation on a specific account or
+        organization. You can find this in the installation URL or via the GitHub API.
+      is_required: true
+      is_sensitive: false
+  - private_pem:
+    opts:
+      title: "GitHub App Private Key (PEM)"
+      summary: "The private key for your GitHub App"
+      description: |
+        The RSA private key for your GitHub App in PEM format. This is the .pem
+        file you downloaded when creating the app. Include the full key with
+        BEGIN/END markers.
+
+        Store this as a Secret environment variable in Bitrise.
+      is_required: true
+      is_sensitive: true
+      is_expand: true
+  - permissions:
+    opts:
+      title: "Custom Permissions (Optional)"
+      summary: "Restrict token to specific permissions"
+      description: |
+        Optional JSON object to restrict the installation token to specific permissions.
+        Format: {"resource": "access_level", ...}
+        Example: {"contents": "read", "issues": "write"}
+
+        If omitted, the token will have all permissions configured for your app.
+        Requested permissions must be a subset of your app's configured permissions.
+      is_required: false
+      is_sensitive: false
 
 outputs:
-  - EXAMPLE_STEP_OUTPUT:
+  - GITHUB_APPS_INSTALLATION_TOKEN:
     opts:
-      title: "Example Step Output"
-      summary: Summary. No more than 2-3 sentences.
+      title: "GitHub Apps Installation Token"
+      summary: "The generated installation access token"
       description: |
-        Description of this output.
+        The installation access token for your GitHub App. This token can be
+        used to authenticate API requests as the GitHub App installation.
 
-        Can be Markdown formatted text.
+        Valid for 1 hour from generation. Use in subsequent steps with:
+        curl -H "Authorization: Bearer $GITHUB_APPS_INSTALLATION_TOKEN" ...
+      is_sensitive: true

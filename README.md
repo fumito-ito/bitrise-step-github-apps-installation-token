@@ -1,6 +1,8 @@
-# github-apps-installation-token
+# GitHub Apps Installation Token Generator
 
-This step provides GitHub Apps Installation Token from your App's pem.
+Generate GitHub Apps Installation Tokens for authenticating to GitHub APIs in your Bitrise workflows.
+
+This step generates a GitHub Apps Installation Token by accepting your GitHub App ID, Installation ID, and private PEM key. The generated token is exported as `GITHUB_APPS_INSTALLATION_TOKEN` for use in subsequent workflow steps.
 
 
 ## How to use this Step
@@ -25,11 +27,25 @@ Step by step:
 
 An example `.bitrise.secrets.yml` file:
 
-```
+```yaml
 envs:
-- A_SECRET_PARAM_ONE: the value for secret one
-- A_SECRET_PARAM_TWO: the value for secret two
+  # GitHub App ID - find this in your GitHub App settings under "About" → "App ID"
+  - GITHUB_APP_ID: "123456"
+
+  # GitHub App Installation ID - find this in the installation URL or via the GitHub API
+  # Format: https://github.com/settings/installations/{installation_id}
+  - GITHUB_INSTALLATION_ID: "789012"
+
+  # GitHub App Private Key (PEM) - the .pem file you downloaded when creating the app
+  # Include the full key with BEGIN/END markers
+  - GITHUB_APP_PRIVATE_PEM: |
+      -----BEGIN RSA PRIVATE KEY-----
+      MIIEpAIBAAKCAQEA...
+      ... (your private key content here) ...
+      -----END RSA PRIVATE KEY-----
 ```
+
+**Security Note**: Never commit `.bitrise.secrets.yml` to your repository. This file is already included in `.gitignore`.
 
 ## How to create your own step
 
