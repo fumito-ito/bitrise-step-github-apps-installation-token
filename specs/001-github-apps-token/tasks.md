@@ -59,17 +59,17 @@ Bitrise steps use flat structure at repository root:
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement JWT header creation function in step.sh
-- [ ] T013 [US1] Implement JWT payload creation with iat/exp/iss claims in step.sh
-- [ ] T014 [US1] Implement temporary PEM file creation with mktemp and chmod 0600 in step.sh
-- [ ] T015 [US1] Implement JWT signing with openssl dgst -sha256 -sign in step.sh
-- [ ] T016 [US1] Implement complete JWT generation function (header.payload.signature) in step.sh
-- [ ] T017 [US1] Implement GitHub API call with curl (POST /app/installations/{id}/access_tokens) in step.sh
-- [ ] T018 [US1] Implement HTTP response parsing (status code and body separation) in step.sh
-- [ ] T019 [US1] Implement token extraction from JSON response using jq in step.sh
-- [ ] T020 [US1] Implement envman export with exit code validation in step.sh
-- [ ] T021 [US1] Implement success logging (non-sensitive: expiration time, confirmation message) in step.sh
-- [ ] T022 [US1] Add set +x around sensitive operations (JWT generation, API call, token export) in step.sh
+- [x] T012 [US1] Implement JWT header creation function in step.sh
+- [x] T013 [US1] Implement JWT payload creation with iat/exp/iss claims in step.sh
+- [x] T014 [US1] Implement temporary PEM file creation with mktemp and chmod 0600 in step.sh
+- [x] T015 [US1] Implement JWT signing with openssl dgst -sha256 -sign in step.sh
+- [x] T016 [US1] Implement complete JWT generation function (header.payload.signature) in step.sh
+- [x] T017 [US1] Implement GitHub API call with curl (POST /app/installations/{id}/access_tokens) in step.sh
+- [x] T018 [US1] Implement HTTP response parsing (status code and body separation) in step.sh
+- [x] T019 [US1] Implement token extraction from JSON response using jq in step.sh
+- [x] T020 [US1] Implement envman export with exit code validation in step.sh
+- [x] T021 [US1] Implement success logging (non-sensitive: expiration time, confirmation message) in step.sh
+- [x] T022 [US1] Add set +x around sensitive operations (JWT generation, API call, token export) in step.sh
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
