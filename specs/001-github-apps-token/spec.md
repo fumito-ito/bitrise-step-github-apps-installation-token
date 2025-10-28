@@ -5,6 +5,15 @@
 **Status**: Draft
 **Input**: User description: "This Bitrise step receives github_apps_private_pem, github_apps_installation_id, and permissions as arguments to generate a GitHub Apps Installation Token. The generated Installation Token is saved to an environment variable using envman add --key GITHUB_APPS_INSTALLATION_TOKEN --value {generated token}."
 
+## Clarifications
+
+### Session 2025-10-28
+
+- Q: How should the step handle GitHub API rate limits or temporary unavailability? → A: Wait and retry once after 5 seconds, then fail if still unavailable
+- Q: How should the step handle PEM keys with extra whitespace or formatting differences? → A: Auto-normalize whitespace (trim leading/trailing, normalize line breaks) and proceed if valid structure
+- Q: How should the step handle different permission format variations? → A: Pass through to GitHub API without validation - let GitHub validate and return errors
+- Q: Should the step verify that envman successfully exported the token? → A: Verify envman exit code - fail step if envman export fails
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Generate Installation Token with Basic Inputs (Priority: P1)
@@ -59,13 +68,12 @@ As a workflow user, I need clear error messages when token generation fails, so 
 
 ### Edge Cases
 
-- What happens when the private PEM key is provided but contains extra whitespace or formatting differences?
-- What happens when the GitHub API is temporarily unavailable or rate-limited?
+- **Private PEM key with extra whitespace or formatting differences**: Step automatically normalizes whitespace (trims leading/trailing whitespace, normalizes line breaks) before validation. If the normalized key has valid structure (BEGIN/END markers), it proceeds; otherwise, validation fails with a clear error message.
+- **GitHub API rate limits or temporary unavailability**: Step waits 5 seconds and retries once. If the second attempt fails, the step exits with a clear error message indicating rate limit or unavailability.
 - What happens when the App ID or Installation ID contains non-numeric characters?
-- What happens when the permissions parameter contains invalid permission names?
+- **Permissions parameter with invalid names or different formats**: Step passes the permissions parameter through to GitHub API without format validation. GitHub API validates the format and returns clear error messages for invalid permissions. The step relays these errors to the user with context about which permissions were rejected.
 - How does the step handle cleanup if it fails partway through (e.g., after creating temporary files)?
-- What happens when the generated token needs to be used immediately but hasn't propagated to the environment yet?
-- What happens when the user provides permissions in different formats (e.g., "read:contents" vs "contents:read")?
+- **Environment variable propagation**: Step verifies envman's exit code after exporting the token. If envman export fails (non-zero exit code), the step fails with a clear error message. This ensures the token is available for subsequent workflow steps before reporting success.
 
 ## Requirements *(mandatory)*
 
@@ -78,16 +86,17 @@ As a workflow user, I need clear error messages when token generation fails, so 
 - **FR-005**: Step MUST validate all required inputs (App ID, Installation ID, private PEM) before attempting token generation
 - **FR-006**: Step MUST generate a JWT (JSON Web Token) with RS256 signing, using the private PEM key, with appropriate claims (iat, exp, iss) and maximum 10-minute expiration
 - **FR-007**: Step MUST make an authenticated API request to GitHub to exchange the JWT for an installation access token
-- **FR-008**: Step MUST export the generated installation token to the environment variable GITHUB_APPS_INSTALLATION_TOKEN using envman
+- **FR-008**: Step MUST export the generated installation token to the environment variable GITHUB_APPS_INSTALLATION_TOKEN using envman and verify envman's exit code. If envman export fails, step MUST exit with non-zero code and clear error message
 - **FR-009**: Step MUST NOT log or print sensitive data (private keys, JWTs, tokens) to stdout or stderr
 - **FR-010**: Step MUST use secure file permissions (0600) for any temporary files containing sensitive data
 - **FR-011**: Step MUST clean up temporary files containing sensitive data on both success and failure exit paths
 - **FR-012**: Step MUST exit with code 0 on successful token generation and non-zero on any failure
 - **FR-013**: Step MUST handle network errors gracefully and provide actionable error messages
-- **FR-014**: Step MUST handle GitHub API errors (invalid credentials, missing installation, API rate limits) and provide clear error messages
-- **FR-015**: Step MUST validate the PEM key format before attempting to use it
-- **FR-016**: When permissions parameter is provided, step MUST include it in the token generation request to GitHub API
+- **FR-014**: Step MUST handle GitHub API errors (invalid credentials, missing installation, API rate limits) and provide clear error messages. For rate limits or temporary unavailability, step MUST wait 5 seconds and retry once before failing
+- **FR-015**: Step MUST normalize whitespace in the PEM key (trim leading/trailing, normalize line breaks) and then validate the PEM key format (BEGIN/END markers, structure) before attempting to use it
+- **FR-016**: When permissions parameter is provided, step MUST include it in the token generation request to GitHub API without performing format validation (GitHub API validates)
 - **FR-017**: When permissions parameter is omitted, step MUST generate token with app's default configured permissions
+- **FR-018**: When GitHub API rejects permissions due to invalid format or unavailable permissions, step MUST relay the API error message with context about which permissions were rejected
 
 ### Key Entities
 
