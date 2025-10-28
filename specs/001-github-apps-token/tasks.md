@@ -123,16 +123,16 @@ Bitrise steps use flat structure at repository root:
 
 **Purpose**: Improvements that affect multiple user stories and final documentation
 
-- [ ] T041 Add script header comments with usage examples to step.sh
-- [ ] T042 Update README.md with setup instructions (GitHub App creation, credentials)
-- [ ] T043 Update README.md with usage examples (basic, custom permissions)
-- [ ] T044 Update README.md with troubleshooting section (common errors and solutions)
-- [ ] T045 Add example .bitrise.secrets.yml format to README.md
-- [ ] T046 Document exit codes (0=success, 1=validation, 2=API error, 3=envman) in README.md
-- [ ] T047 Verify step.yml has accurate descriptions and examples for all inputs
-- [ ] T048 Verify all logging uses appropriate log levels (errors to stderr, info to stdout)
-- [ ] T049 Run quickstart.md validation scenarios to verify end-to-end functionality
-- [ ] T050 Run bitrise run audit-this-step to validate step.yml compliance
+- [x] T041 Add script header comments with usage examples to step.sh
+- [x] T042 Update README.md with setup instructions (GitHub App creation, credentials)
+- [x] T043 Update README.md with usage examples (basic, custom permissions)
+- [x] T044 Update README.md with troubleshooting section (common errors and solutions)
+- [x] T045 Add example .bitrise.secrets.yml format to README.md
+- [x] T046 Document exit codes (0=success, 1=validation, 2=API error, 3=envman) in README.md
+- [x] T047 Verify step.yml has accurate descriptions and examples for all inputs
+- [x] T048 Verify all logging uses appropriate log levels (errors to stderr, info to stdout)
+- [x] T049 Run quickstart.md validation scenarios to verify end-to-end functionality
+- [x] T050 Run bitrise run audit-this-step to validate step.yml compliance
 
 ---
 

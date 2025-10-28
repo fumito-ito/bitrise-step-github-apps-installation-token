@@ -4,6 +4,177 @@ Generate GitHub Apps Installation Tokens for authenticating to GitHub APIs in yo
 
 This step generates a GitHub Apps Installation Token by accepting your GitHub App ID, Installation ID, and private PEM key. The generated token is exported as `GITHUB_APPS_INSTALLATION_TOKEN` for use in subsequent workflow steps.
 
+## Features
+
+- **Secure Token Generation**: Creates installation tokens using JWT authentication
+- **Custom Permissions**: Restrict tokens to specific permissions for least-privilege security
+- **Error Handling**: Clear, actionable error messages for all failure scenarios
+- **Retry Logic**: Automatic retry for transient API failures (503/429 errors)
+- **Security**: Private keys handled securely with restricted file permissions and no logging
+
+## Prerequisites
+
+Before using this step, you need:
+
+1. **GitHub App**: Create a GitHub App in your GitHub organization or account
+   - Go to Settings → Developer settings → GitHub Apps → New GitHub App
+   - Configure required permissions for your app
+   - Generate and download the private key (.pem file)
+   - Note the App ID from the "About" section
+
+2. **App Installation**: Install your GitHub App on the target organization/repository
+   - Go to your GitHub App settings → Install App
+   - Select the organization or account to install on
+   - Note the Installation ID from the URL: `https://github.com/settings/installations/{installation_id}`
+
+3. **Bitrise Secrets**: Store credentials as Secret Environment Variables in Bitrise
+   - `GITHUB_APP_ID`: Your GitHub App ID
+   - `GITHUB_INSTALLATION_ID`: The installation ID
+   - `GITHUB_APP_PRIVATE_PEM`: The contents of your .pem file
+
+## Usage
+
+### Basic Usage (All Permissions)
+
+Add this step to your `bitrise.yml`:
+
+```yaml
+workflows:
+  deploy:
+    steps:
+    - github-apps-installation-token:
+        inputs:
+        - app_id: $GITHUB_APP_ID
+        - installation_id: $GITHUB_INSTALLATION_ID
+        - private_pem: $GITHUB_APP_PRIVATE_PEM
+    - script:
+        inputs:
+        - content: |
+            #!/bin/bash
+            # Use the token in subsequent steps
+            curl -H "Authorization: Bearer $GITHUB_APPS_INSTALLATION_TOKEN" \
+              https://api.github.com/repos/owner/repo/issues
+```
+
+### Custom Permissions (Least-Privilege)
+
+Restrict the token to specific permissions:
+
+```yaml
+workflows:
+  build:
+    steps:
+    - github-apps-installation-token:
+        inputs:
+        - app_id: $GITHUB_APP_ID
+        - installation_id: $GITHUB_INSTALLATION_ID
+        - private_pem: $GITHUB_APP_PRIVATE_PEM
+        - permissions: '{"contents":"read","checks":"write"}'
+    - script:
+        inputs:
+        - content: |
+            #!/bin/bash
+            # Token has only contents:read and checks:write permissions
+            echo "Token: $GITHUB_APPS_INSTALLATION_TOKEN"
+```
+
+## Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `app_id` | GitHub App ID (numeric) | Yes | - |
+| `installation_id` | GitHub App Installation ID (numeric) | Yes | - |
+| `private_pem` | RSA private key in PEM format | Yes | - |
+| `permissions` | JSON object to restrict permissions | No | All app permissions |
+
+## Outputs
+
+| Output | Description |
+|--------|-------------|
+| `GITHUB_APPS_INSTALLATION_TOKEN` | Installation access token (valid for 1 hour) |
+
+## Exit Codes
+
+| Code | Meaning | Examples |
+|------|---------|----------|
+| `0` | Success | Token generated and exported |
+| `1` | Validation Error | Missing app_id, invalid PEM format, malformed JSON |
+| `2` | API Error | 401 (bad credentials), 404 (installation not found), network error |
+| `3` | Envman Error | Token export failed |
+
+## Troubleshooting
+
+### Error: "App ID is required: set the app_id input parameter"
+
+**Cause**: The `app_id` input is empty or not set.
+
+**Solution**: Ensure you have set the `GITHUB_APP_ID` secret in Bitrise and referenced it correctly in your workflow.
+
+### Error: "App ID must be numeric: received 'xxx'"
+
+**Cause**: The app_id contains non-numeric characters.
+
+**Solution**: Check your GitHub App settings page. The App ID should be a numeric value like `123456`.
+
+### Error: "Invalid PEM format: ensure the key includes BEGIN/END RSA PRIVATE KEY markers"
+
+**Cause**: The private key is missing the required `-----BEGIN` and `-----END` markers, or is corrupted.
+
+**Solution**:
+1. Re-download the private key from your GitHub App settings
+2. Ensure the full key content (including headers) is stored in the secret
+3. Check for extra whitespace or formatting issues (the step auto-normalizes whitespace)
+
+### Error: "Authentication failed (HTTP 401): Invalid JWT or App ID"
+
+**Cause**: The JWT signature is invalid, or the App ID doesn't match the private key.
+
+**Solution**:
+1. Verify the App ID matches your GitHub App
+2. Ensure the private key is for the correct GitHub App
+3. Check that the private key hasn't been regenerated (old keys become invalid)
+
+### Error: "Installation not found (HTTP 404): Check installation_id"
+
+**Cause**: The Installation ID doesn't exist, or the app isn't installed.
+
+**Solution**:
+1. Verify the installation ID is correct
+2. Check that the GitHub App is installed on the target organization/account
+3. Ensure the installation hasn't been uninstalled
+
+### Error: "Permission denied (HTTP 403): App may not have access"
+
+**Cause**: The app doesn't have permission to access the installation.
+
+**Solution**:
+1. Verify the app is installed on the target account
+2. Check the app's permissions in GitHub settings
+3. Ensure the installation hasn't been suspended
+
+### Error: "Invalid permissions format: must be valid JSON"
+
+**Cause**: The `permissions` input contains invalid JSON syntax.
+
+**Solution**:
+- Use valid JSON format: `'{"contents":"read","issues":"write"}'`
+- Check for missing quotes, commas, or brackets
+- Test your JSON with a validator like `jq`
+
+### Error: "GitHub API unavailable after retry (HTTP 503)"
+
+**Cause**: GitHub API is temporarily unavailable or rate-limited.
+
+**Solution**:
+- Wait a few minutes and re-run the build
+- Check [GitHub Status](https://www.githubstatus.com/) for API issues
+- Verify you haven't exceeded GitHub API rate limits
+
+### Token expires too quickly
+
+**Behavior**: Installation tokens are valid for 1 hour by GitHub design.
+
+**Solution**: Generate a new token in each workflow run. Don't try to cache or reuse tokens across builds.
 
 ## How to use this Step
 

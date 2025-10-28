@@ -4,6 +4,43 @@ set -e
 # ==============================================================================
 # GitHub Apps Installation Token Generator
 # Bitrise Step for generating GitHub Apps installation tokens
+#
+# This script generates a GitHub Apps Installation Token by:
+# 1. Validating required tools (openssl, curl, jq, envman, base64)
+# 2. Validating input parameters (app_id, installation_id, private_pem)
+# 3. Generating a JWT (JSON Web Token) signed with the app's private key
+# 4. Calling the GitHub API to exchange JWT for an installation token
+# 5. Exporting the token to GITHUB_APPS_INSTALLATION_TOKEN environment variable
+#
+# Usage Example:
+#   export app_id="123456"
+#   export installation_id="789012"
+#   export private_pem="$(cat app-private-key.pem)"
+#   export permissions='{"contents":"read","issues":"write"}'  # Optional
+#   ./step.sh
+#
+# Required Environment Variables:
+#   - app_id: GitHub App ID (numeric)
+#   - installation_id: GitHub App Installation ID (numeric)
+#   - private_pem: RSA private key in PEM format (with BEGIN/END markers)
+#
+# Optional Environment Variables:
+#   - permissions: JSON object to restrict token permissions (default: all app permissions)
+#
+# Output:
+#   - GITHUB_APPS_INSTALLATION_TOKEN: Installation access token (valid for 1 hour)
+#
+# Exit Codes:
+#   0 - Success: Token generated and exported
+#   1 - Validation Error: Invalid inputs or missing tools
+#   2 - API Error: GitHub API request failed
+#   3 - Envman Error: Failed to export token to environment
+#
+# Security:
+#   - Private keys stored in temp files with 0600 permissions
+#   - Sensitive operations protected with 'set +x' to prevent logging
+#   - Temp files cleaned up on all exit paths (trap handler)
+#
 # ==============================================================================
 
 # Exit codes
@@ -54,8 +91,8 @@ validate_tools() {
   done
 
   if [ ${#missing_tools[@]} -gt 0 ]; then
-    echo "Error: Required tools are missing: ${missing_tools[*]}"
-    echo "Please install the missing tools and try again."
+    echo "Error: Required tools are missing: ${missing_tools[*]}" >&2
+    echo "Please install the missing tools and try again." >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 }
@@ -73,12 +110,12 @@ validate_app_id() {
   local app_id="$1"
 
   if [ -z "$app_id" ]; then
-    echo "Error: App ID is required: set the app_id input parameter"
+    echo "Error: App ID is required: set the app_id input parameter" >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 
   if ! [[ "$app_id" =~ ^[0-9]+$ ]]; then
-    echo "Error: App ID must be numeric: received '$app_id'"
+    echo "Error: App ID must be numeric: received '$app_id'" >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 }
@@ -88,12 +125,12 @@ validate_installation_id() {
   local installation_id="$1"
 
   if [ -z "$installation_id" ]; then
-    echo "Error: Installation ID is required: set the installation_id input parameter"
+    echo "Error: Installation ID is required: set the installation_id input parameter" >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 
   if ! [[ "$installation_id" =~ ^[0-9]+$ ]]; then
-    echo "Error: Installation ID must be numeric: received '$installation_id'"
+    echo "Error: Installation ID must be numeric: received '$installation_id'" >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 }
@@ -103,14 +140,14 @@ validate_pem() {
   local pem="$1"
 
   if [ -z "$pem" ]; then
-    echo "Error: Private PEM key is required: set the private_pem input parameter"
+    echo "Error: Private PEM key is required: set the private_pem input parameter" >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 
   # Check for BEGIN and END markers with PRIVATE KEY
   if ! echo "$pem" | grep -q "BEGIN.*PRIVATE KEY" || \
      ! echo "$pem" | grep -q "END.*PRIVATE KEY"; then
-    echo "Error: Invalid PEM format: ensure the key includes BEGIN/END RSA PRIVATE KEY markers"
+    echo "Error: Invalid PEM format: ensure the key includes BEGIN/END RSA PRIVATE KEY markers" >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 }
@@ -254,7 +291,7 @@ extract_token() {
   token=$(echo "$json_body" | jq -r '.token // empty')
 
   if [ -z "$token" ]; then
-    echo "Error: Failed to extract token from API response"
+    echo "Error: Failed to extract token from API response" >&2
     exit $EXIT_API_ERROR
   fi
 
@@ -270,7 +307,7 @@ export_token() {
 
   # Export token using envman
   if ! echo "$token" | envman add --key GITHUB_APPS_INSTALLATION_TOKEN; then
-    echo "Error: Failed to export token to environment: envman returned non-zero exit code"
+    echo "Error: Failed to export token to environment: envman returned non-zero exit code" >&2
     exit $EXIT_ENVMAN_ERROR
   fi
 
@@ -307,33 +344,33 @@ handle_api_error() {
         sleep 5
         return 0  # Indicate retry
       else
-        echo "Error: GitHub API unavailable after retry (HTTP ${http_code}): ${error_message}"
+        echo "Error: GitHub API unavailable after retry (HTTP ${http_code}): ${error_message}" >&2
         exit $EXIT_API_ERROR
       fi
       ;;
     401)
-      echo "Error: Authentication failed (HTTP 401): Invalid JWT or App ID"
-      echo "Details: ${error_message}"
+      echo "Error: Authentication failed (HTTP 401): Invalid JWT or App ID" >&2
+      echo "Details: ${error_message}" >&2
       exit $EXIT_API_ERROR
       ;;
     404)
-      echo "Error: Installation not found (HTTP 404): Check installation_id"
-      echo "Details: ${error_message}"
+      echo "Error: Installation not found (HTTP 404): Check installation_id" >&2
+      echo "Details: ${error_message}" >&2
       exit $EXIT_API_ERROR
       ;;
     403)
-      echo "Error: Permission denied (HTTP 403): App may not have access"
-      echo "Details: ${error_message}"
+      echo "Error: Permission denied (HTTP 403): App may not have access" >&2
+      echo "Details: ${error_message}" >&2
       exit $EXIT_API_ERROR
       ;;
     422)
-      echo "Error: Invalid request (HTTP 422): Check permissions format"
-      echo "Details: ${error_message}"
+      echo "Error: Invalid request (HTTP 422): Check permissions format" >&2
+      echo "Details: ${error_message}" >&2
       exit $EXIT_API_ERROR
       ;;
     *)
-      echo "Error: GitHub API request failed (HTTP ${http_code})"
-      echo "Details: ${error_message}"
+      echo "Error: GitHub API request failed (HTTP ${http_code})" >&2
+      echo "Details: ${error_message}" >&2
       exit $EXIT_API_ERROR
       ;;
   esac
@@ -371,7 +408,7 @@ main() {
   if [ -n "$permissions" ]; then
     # Validate JSON format
     if ! echo "$permissions" | jq empty 2>/dev/null; then
-      echo "Error: Invalid permissions format: must be valid JSON"
+      echo "Error: Invalid permissions format: must be valid JSON" >&2
       exit $EXIT_VALIDATION_ERROR
     fi
     permissions_json="{\"permissions\":${permissions}}"
