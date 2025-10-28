@@ -40,12 +40,12 @@ Bitrise steps use flat structure at repository root:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Implement base64url encoding function in step.sh
-- [ ] T007 Implement cleanup trap handler for EXIT/ERR/INT/TERM signals in step.sh
-- [ ] T008 Implement tool validation (openssl, curl, jq, envman, base64) in step.sh
-- [ ] T009 Implement PEM normalization function (trim whitespace, normalize line breaks) in step.sh
-- [ ] T010 Implement input validation function for app_id and installation_id (non-empty, numeric) in step.sh
-- [ ] T011 Implement PEM validation function (BEGIN/END markers check) in step.sh
+- [x] T006 Implement base64url encoding function in step.sh
+- [x] T007 Implement cleanup trap handler for EXIT/ERR/INT/TERM signals in step.sh
+- [x] T008 Implement tool validation (openssl, curl, jq, envman, base64) in step.sh
+- [x] T009 Implement PEM normalization function (trim whitespace, normalize line breaks) in step.sh
+- [x] T010 Implement input validation function for app_id and installation_id (non-empty, numeric) in step.sh
+- [x] T011 Implement PEM validation function (BEGIN/END markers check) in step.sh
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
