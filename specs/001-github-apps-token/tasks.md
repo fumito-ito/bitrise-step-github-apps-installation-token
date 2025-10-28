@@ -83,11 +83,11 @@ Bitrise steps use flat structure at repository root:
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Add permissions parameter validation (valid JSON if provided) in step.sh
-- [ ] T024 [US2] Implement permissions JSON construction for API request body in step.sh
-- [ ] T025 [US2] Update GitHub API call to include permissions in request body when provided in step.sh
-- [ ] T026 [US2] Update bitrise.yml with test-permissions workflow using custom permissions
-- [ ] T027 [US2] Add verification script in bitrise.yml to check token permissions via GitHub API
+- [x] T023 [US2] Add permissions parameter validation (valid JSON if provided) in step.sh
+- [x] T024 [US2] Implement permissions JSON construction for API request body in step.sh
+- [x] T025 [US2] Update GitHub API call to include permissions in request body when provided in step.sh
+- [x] T026 [US2] Update bitrise.yml with test-permissions workflow using custom permissions
+- [x] T027 [US2] Add verification script in bitrise.yml to check token permissions via GitHub API
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
