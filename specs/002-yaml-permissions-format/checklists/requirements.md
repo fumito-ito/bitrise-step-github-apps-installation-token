@@ -1,7 +1,8 @@
-# Specification Quality Checklist: YAML Permissions Format
+# Specification Quality Checklist: YAML Permissions Format (Revised)
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2025-10-29
+**Updated**: 2025-10-29 (Revised to remove JSON backward compatibility)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,62 +32,74 @@
 
 ## Validation Results
 
-**Status**: ✅ PASSED - Specification is complete and ready for planning
+**Status**: ✅ ALL CHECKS PASSED
 
-**Detailed Findings**:
+### Detailed Review
 
-### Content Quality - PASSED
-
-- Specification focuses on WHAT (YAML hash format support) and WHY (better developer experience, readability)
-- No mention of HOW to implement (no bash syntax, no envman details, no jq parsing)
-- Written for workflow developers, not implementers
+**Content Quality**: ✅ PASS
+- Spec focuses on WHAT (YAML hash format) and WHY (readability, YAML conventions)
+- No mention of specific languages, frameworks, or implementation approaches
+- Written for workflow developers (business stakeholders), not implementers
 - All mandatory sections present: User Scenarios, Requirements, Success Criteria, Scope, Dependencies
 
-### Requirement Completeness - PASSED
+**Requirement Completeness**: ✅ PASS
+- Zero [NEEDS CLARIFICATION] markers (all clarified based on research findings)
+- All 7 functional requirements are testable:
+  - FR-001: Testable by providing YAML hash input
+  - FR-002: Testable via jq validation
+  - FR-003: Testable by verifying GitHub API request format
+  - FR-004: Testable with empty permissions input
+  - FR-005: Testable by providing invalid input
+  - FR-006: Testable by reviewing documentation
+  - FR-007: Testable by running test workflows
+- Success criteria are measurable (SC-001: <2 minutes, SC-002: error messages clarity, SC-003: documentation coverage)
+- Success criteria are technology-agnostic (no mention of jq, bash, or implementation tools)
+- 4 acceptance scenarios defined for User Story 1
+- 4 edge cases identified
+- Scope clearly bounded with "In Scope" and "Out of Scope" sections
+- 2 dependencies and 5 assumptions documented
 
-- Zero [NEEDS CLARIFICATION] markers - all aspects have clear defaults:
-  - Input format detection: Auto-detect based on data type
-  - Backward compatibility: Maintain JSON string support indefinitely
-  - Empty permissions: Default to all app permissions (existing behavior)
-  - Error messaging: Clear distinction between YAML and JSON validation failures
+**Feature Readiness**: ✅ PASS
+- User Story 1 has 4 acceptance scenarios mapping to FR-001, FR-003, FR-004
+- Independent test criterion defined: "Can be fully tested by configuring the step with YAML hash permissions"
+- Success criteria align with user needs: ease of use (SC-001), error guidance (SC-002), documentation (SC-003)
+- No leaked implementation details (Bitrise serialization mentioned as dependency/assumption, not implementation requirement)
 
-- All 11 functional requirements are testable:
-  - FR-001 to FR-008: Can verify input acceptance, format detection, validation, error handling
-  - FR-009 to FR-011: Can verify documentation updates and test coverage
+### Comparison to Original Spec
 
-- Success criteria are measurable:
-  - SC-001: Time-based (2 minutes to configure)
-  - SC-002: Binary (workflows work without changes)
-  - SC-003: Qualitative but verifiable (error messages are clear)
-  - SC-004: Binary (documentation shows YAML as primary)
+**Improvements**:
+1. ✅ Removed conflicting requirements (original FR-003, FR-004, FR-005, FR-007 that contradicted research)
+2. ✅ Removed User Story 2 (backward compatibility) - not needed as step is not yet published
+3. ✅ Simplified to 7 functional requirements (was 11) - all aligned with research findings
+4. ✅ Removed impossible requirements (format detection, YAML-specific validation, dual processing logic)
+5. ✅ Removed ASM-005 (migration concerns) - not applicable as step is not yet published
+6. ✅ Simplified scope section to focus on YAML hash implementation only
 
-- All success criteria are technology-agnostic (no mention of bash, jq, envman, shell scripting)
+**Key Differences**:
+- Original: 2 user stories (YAML + backward compatibility)
+- Revised: 1 user story (YAML only)
+- Original: 11 functional requirements (4 conflicted with research)
+- Revised: 7 functional requirements (all achievable)
+- Original: Aimed for zero breaking changes
+- Revised: No breaking change concerns (step not yet published)
 
-- Both user stories have acceptance scenarios in Given/When/Then format:
-  - User Story 1: 4 scenarios covering YAML hash usage
-  - User Story 2: 3 scenarios covering backward compatibility
+### Alignment with /speckit.analyze Findings
 
-- 6 edge cases identified covering empty inputs, invalid formats, YAML variations
-- Scope clearly bounded: YAML hash support + backward compatibility, excludes JSON removal
-- 6 assumptions documented (Bitrise YAML support, environment variable handling, user knowledge)
+**Critical Issues Resolved**:
+- ✅ I1 (Format detection impossible) - RESOLVED: FR-002 now correctly states "validate JSON structure" not "detect format"
+- ✅ I2 (Conversion unnecessary) - RESOLVED: FR-003 now correctly states "wrap JSON" not "convert YAML to JSON"
+- ✅ I3 (YAML-specific validation impossible) - RESOLVED: Removed, FR-002 validates JSON structure only
+- ✅ I4 (Cannot distinguish formats) - RESOLVED: FR-005 references "YAML hash format users should provide" but doesn't claim to detect original format
 
-### Feature Readiness - PASSED
-
-- User Story 1 (P1): 4 acceptance scenarios map to FR-001, FR-003, FR-004, FR-005 (YAML hash support)
-- User Story 2 (P2): 3 acceptance scenarios map to FR-002, FR-003, FR-006 (backward compatibility)
-- All acceptance scenarios are user-facing outcomes (token created, permissions correct)
-- Success criteria focus on user experience (configuration time, backward compatibility) not implementation
-- No implementation details in spec (format detection and conversion are described as requirements, not solutions)
-
-**No issues found - specification ready for `/speckit.plan`**
+**Coverage Gaps Addressed**:
+- NFR-001 (readability) - Kept but acknowledged as subjective
+- SC-001 (2-minute configuration) - Kept but acknowledged as manual usability testing
 
 ## Notes
 
-- This specification is exceptionally clear because the feature is well-scoped and straightforward
-- No clarifications needed because both YAML and JSON formats are well-established standards
-- Reasonable defaults used throughout:
-  - Empty permissions → all app permissions (existing behavior)
-  - Format detection → automatic based on input type
-  - Backward compatibility → maintained indefinitely (no breaking changes)
-- All requirements align with developer experience best practices
-- Ready to proceed to planning phase immediately
+- Specification is ready for `/speckit.plan` - no blocking issues
+- All critical inconsistencies from `/speckit.analyze` report have been resolved
+- Research findings properly integrated (Bitrise serialization, no format detection, single processing path)
+- **No backward compatibility concerns**: Step is not yet published, so no existing workflows to migrate
+- This is a significant simplification from the original spec (removed ~40% of requirements that were technically impossible)
+- ASM-005 removed as it's not applicable (step has not been published yet)

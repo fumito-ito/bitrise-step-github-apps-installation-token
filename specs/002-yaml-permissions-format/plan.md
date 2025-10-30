@@ -5,21 +5,21 @@
 
 ## Summary
 
-Add support for YAML hash/map format for the `permissions` input parameter in the GitHub Apps Installation Token step, while maintaining full backward compatibility with the existing JSON string format. This enhancement improves developer experience by allowing users to specify permissions using native YAML syntax (key: value pairs) instead of escaped JSON strings, making workflow configurations more readable and less error-prone.
+Add support for YAML hash format for the `permissions` input parameter in the GitHub Apps Installation Token step. This enhancement improves developer experience by allowing users to specify permissions using native YAML syntax (key: value pairs) instead of JSON strings, making workflow configurations more readable and less error-prone. Based on research findings, Bitrise automatically serializes YAML hashes to JSON strings, so no format detection or conversion logic is needed in step.sh.
 
-**Technical Approach**: Modify step.yml to accept hash/map input type, update step.sh to auto-detect input format (YAML hash vs JSON string) and convert YAML hash to JSON for GitHub API compatibility, while preserving all existing functionality and security measures.
+**Technical Approach**: Update step.yml to document YAML hash format and set `is_expand: false`, enhance error messages in step.sh to reference YAML hash format, update documentation with YAML examples, and add test workflows.
 
 ## Technical Context
 
 **Language/Version**: Bash 4.x+ (POSIX-compatible shell script)
-**Primary Dependencies**: jq (JSON parsing/generation), envman (Bitrise environment management), openssl, curl, base64
+**Primary Dependencies**: jq (JSON validation - already required), envman (Bitrise environment management), openssl, curl, base64
 **Storage**: N/A (stateless operation, no persistent storage)
 **Testing**: Bitrise CLI (`bitrise run test`), shell script validation
 **Target Platform**: Linux/macOS (Bitrise build environments)
 **Project Type**: Bitrise Step (single shell script with YAML configuration)
-**Performance Goals**: Format detection and conversion add <10ms overhead (negligible impact)
-**Constraints**: Must maintain backward compatibility, no breaking changes to existing workflows
-**Scale/Scope**: Modification to existing step, affects 1 input parameter, 1 validation function, 1 conversion function, documentation updates
+**Performance Goals**: No performance impact (Bitrise handles serialization)
+**Constraints**: Must leverage Bitrise's automatic YAML-to-JSON serialization, no new dependencies
+**Scale/Scope**: Modification to existing step - affects 1 input parameter configuration, 1 error message, documentation updates, test workflows
 
 ## Constitution Check
 
@@ -31,10 +31,10 @@ Add support for YAML hash/map format for the `permissions` input parameter in th
 - [x] No complex language-specific tooling required (pure bash + existing tools)
 
 **Bitrise Step Standards Compliance (Principle II)**:
-- [x] step.yml defines all inputs/outputs according to Bitrise spec (permissions input updated to accept hash/map)
+- [x] step.yml defines all inputs/outputs according to Bitrise spec (permissions input will be updated with better documentation)
 - [x] Inputs accessed via environment variables (existing pattern maintained)
 - [x] Outputs use envman for export (no changes to output mechanism)
-- [x] Metadata (title, summary, description) is complete and accurate (will be updated to reflect new format)
+- [x] Metadata (title, summary, description) is complete and accurate (will be updated to document YAML hash format)
 
 **Secure Credential Handling (Principle III - NON-NEGOTIABLE)**:
 - [x] Private keys/tokens passed via secure environment variables (no changes to credential handling)
@@ -44,15 +44,15 @@ Add support for YAML hash/map format for the `permissions` input parameter in th
 - [x] All GitHub API calls use HTTPS (no changes to API integration)
 
 **Clear Input/Output Contract (Principle IV)**:
-- [x] All required inputs validated at start (new validation added for YAML hash format)
+- [x] All required inputs validated at start (existing validation maintained, error messages enhanced)
 - [x] Validation failures exit with non-zero status (existing exit code 1 for validation errors)
-- [x] Error messages are actionable (new messages distinguish YAML hash vs JSON string errors)
+- [x] Error messages are actionable (error messages will be enhanced to reference YAML hash format)
 - [x] Success confirmation provided (existing success logging unchanged)
 
 **Error Handling & Exit Codes (Principle V)**:
 - [x] Exit code 0 for success, non-zero for failure (existing codes maintained: 0=success, 1=validation, 2=API, 3=envman)
 - [x] set -e used for fail-fast behavior (existing pattern maintained)
-- [x] Network/API/validation errors caught and reported (new validation integrated into existing error handling)
+- [x] Network/API/validation errors caught and reported (existing error handling maintained)
 - [x] Cleanup actions run on failure (existing trap handlers unchanged)
 
 **Constitution Compliance**: ✅ ALL CHECKS PASSED - No violations, no justification needed
@@ -65,11 +65,11 @@ Add support for YAML hash/map format for the `permissions` input parameter in th
 specs/002-yaml-permissions-format/
 ├── spec.md              # Feature specification (already created)
 ├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (technical research findings)
-├── data-model.md        # Phase 1 output (permissions data structure)
-├── quickstart.md        # Phase 1 output (migration guide for users)
-├── contracts/           # Phase 1 output (I/O specifications)
-│   └── step-io-contract.md  # Updated input/output contract
+├── research.md          # Phase 0 output (to be generated)
+├── data-model.md        # Phase 1 output (to be generated)
+├── quickstart.md        # Phase 1 output (to be generated)
+├── contracts/           # Phase 1 output (to be generated)
+│   └── step-io-contract.md
 └── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created yet)
 ```
 
@@ -78,8 +78,8 @@ specs/002-yaml-permissions-format/
 **Bitrise Step Structure** (flat layout at repository root):
 
 ```text
-step.sh                  # Main implementation (MODIFIED: format detection and conversion)
-step.yml                 # Step definition (MODIFIED: permissions input configuration)
+step.sh                  # Main implementation (MINOR CHANGES: enhanced error message)
+step.yml                 # Step definition (MODIFIED: permissions input documentation and is_expand setting)
 bitrise.yml              # Test workflows (MODIFIED: add YAML hash format tests)
 README.md                # Documentation (MODIFIED: update examples to show YAML hash)
 
@@ -97,35 +97,29 @@ specs/                   # Feature specifications
 
 > **Not applicable** - No Constitution Check violations
 
-All changes comply with the constitution. No additional complexity introduced beyond the minimal format detection and conversion logic required for the feature.
+All changes comply with the constitution. Minimal changes required: step.yml configuration update (`is_expand: false` + documentation), optional error message enhancement in step.sh, documentation updates, and test workflows.
 
 ---
 
 ## Phase 0: Research
 
-**Objective**: Resolve all technical unknowns about Bitrise YAML hash handling and format detection strategies.
-
-**Status**: ✅ COMPLETED
+**Objective**: Resolve technical unknowns about Bitrise YAML hash handling.
 
 ### Research Questions
 
 1. **How does Bitrise serialize YAML hash inputs to environment variables?**
-   - ✅ Investigated Bitrise documentation and step.yml specification
-   - ✅ Finding: Bitrise automatically serializes YAML hashes to JSON strings
+   - Investigate Bitrise documentation and step.yml specification
+   - Determine format of environment variable (JSON string, key-value pairs, other)
 
-2. **What is the optimal format detection strategy in bash?**
-   - ✅ Research completed - format detection NOT needed
-   - ✅ Finding: Both formats become identical JSON strings after Bitrise serialization
+2. **Is format detection needed in step.sh?**
+   - Research whether step.sh can distinguish YAML hash from other formats
+   - Determine if Bitrise provides metadata about original input format
 
-3. **How to convert YAML hash to JSON using existing tools (jq)?**
-   - ✅ Research completed - conversion NOT needed
-   - ✅ Finding: Bitrise handles conversion automatically, step.sh receives JSON
+3. **What validation is required for YAML hash format?**
+   - Document validation approach (syntax, structure, edge cases)
+   - Determine how to provide clear error messages
 
-4. **What validation is needed for YAML hash format?**
-   - ✅ Research completed - existing validation sufficient
-   - ✅ Finding: `jq empty` validation already handles both formats
-
-**Output**: ✅ [research.md](research.md) - All findings documented, 5 research areas resolved
+**Output**: `research.md` documenting findings and technical decisions
 
 ---
 
@@ -133,54 +127,38 @@ All changes comply with the constitution. No additional complexity introduced be
 
 **Objective**: Create detailed design artifacts for implementation.
 
-**Status**: ✅ COMPLETED
-
 ### 1. Data Model (`data-model.md`)
 
-✅ **COMPLETED** - [data-model.md](data-model.md)
-
-Documented:
-- ✅ YAML Hash Format and JSON String Format structures
-- ✅ GitHub API Format with transformation flow
-- ✅ Format equivalence (both become identical JSON strings)
-- ✅ Validation rules for both formats (jq-based)
-- ✅ Edge cases and common permission examples
+Document the permissions data structure:
+- **YAML Hash Format**: `{ permission_name: access_level, ... }`
+- **Bitrise Serialization**: How YAML hash is transformed to environment variable
+- **GitHub API Format**: `{"permissions": {permission_name: access_level, ...}}`
+- Transformation flow: YAML hash → (Bitrise serialization) → environment variable → GitHub API format
+- Validation rules
 
 ### 2. Contracts (`contracts/step-io-contract.md`)
 
-✅ **COMPLETED** - [contracts/step-io-contract.md](contracts/step-io-contract.md)
-
-Defined:
-- ✅ Updated permissions input specification (accepts both formats)
-- ✅ Input validation contract with enhanced error messages
-- ✅ Output contract (unchanged from original)
-- ✅ Error contract with exit codes and messages
-- ✅ Backward compatibility guarantees
-- ✅ Example workflows for both formats
+Define input/output specifications:
+- **Updated permissions input**: Documentation and examples showing YAML hash format
+- **Input validation**: How permissions are validated (JSON structure check)
+- **Error messages**: Enhanced messages referencing YAML hash format
+- **Example configurations**: YAML hash with various permission combinations
 
 ### 3. Migration Guide (`quickstart.md`)
 
-✅ **COMPLETED** - [quickstart.md](quickstart.md)
-
-Created:
-- ✅ Quick comparison (before/after examples)
-- ✅ Step-by-step migration guide
-- ✅ Common migration scenarios with examples
-- ✅ Backward compatibility assurance
-- ✅ Troubleshooting guide for both formats
-- ✅ Examples by use case (CI/CD, deployment, issues, read-only)
+Create user-facing guide:
+- **YAML hash format examples**: Single permission, multiple permissions, write permissions
+- **Edge cases**: Empty hash, inline vs multi-line YAML, quoted vs unquoted values
+- **Troubleshooting**: Common issues (indentation, syntax errors)
 
 ### 4. Agent Context Update
 
-✅ **COMPLETED** - CLAUDE.md updated
+Run `.specify/scripts/bash/update-agent-context.sh claude` to update CLAUDE.md with:
+- YAML hash format support added to permissions parameter
+- Bitrise serialization behavior
+- No new dependencies or technologies
 
-Updated:
-- ✅ Language: Bash 4.x+ (POSIX-compatible shell script)
-- ✅ Framework: jq, envman, openssl, curl, base64
-- ✅ Database: N/A (stateless operation)
-- ✅ Project type: Bitrise Step
-
-**Output**: ✅ All design artifacts completed - [data-model.md](data-model.md), [contracts/step-io-contract.md](contracts/step-io-contract.md), [quickstart.md](quickstart.md), CLAUDE.md updated
+**Output**: `data-model.md`, `contracts/step-io-contract.md`, `quickstart.md`, updated `CLAUDE.md`
 
 ---
 
@@ -189,13 +167,12 @@ Updated:
 **Not executed by `/speckit.plan`** - Run `/speckit.tasks` separately to generate `tasks.md`
 
 Expected task categories:
-1. **Setup**: Update step.yml to accept hash/map input type
-2. **Core Logic**: Add format detection in step.sh
-3. **Conversion**: Implement YAML hash to JSON conversion
-4. **Validation**: Update validation for both formats
-5. **Testing**: Add test workflows for YAML hash format
-6. **Documentation**: Update README.md examples
-7. **Polish**: Update error messages and deprecation notices
+1. **Setup**: Review existing step.yml and step.sh
+2. **Configuration**: Update step.yml (is_expand, documentation)
+3. **Enhancement**: Update step.sh error messages (optional)
+4. **Testing**: Add test workflows for YAML hash format
+5. **Documentation**: Update README.md with YAML examples
+6. **Validation**: Test all scenarios (single permission, multiple, empty, invalid)
 
 ---
 
@@ -203,10 +180,10 @@ Expected task categories:
 
 After completing Phase 1 design:
 
-**Shell-First Development**: ✅ Maintained - Pure bash implementation, jq (already required)
-**Bitrise Standards**: ✅ Maintained - step.yml updated per Bitrise spec
-**Security**: ✅ Maintained - No changes to credential handling
-**Clear Contract**: ✅ Enhanced - Both formats validated with clear error messages
+**Shell-First Development**: ✅ Maintained - No new dependencies, existing jq validation used
+**Bitrise Standards**: ✅ Maintained - step.yml updated per Bitrise spec, no breaking changes
+**Security**: ✅ Maintained - No changes to credential handling or API integration
+**Clear Contract**: ✅ Enhanced - Error messages reference YAML hash format for better UX
 **Error Handling**: ✅ Maintained - Existing exit codes and error handling preserved
 
 **Final Compliance**: ✅ ALL CHECKS PASSED
@@ -215,9 +192,8 @@ After completing Phase 1 design:
 
 ## Notes
 
-- This is a **backward-compatible enhancement**, not a breaking change
-- Existing workflows using JSON string format continue to work without modification
-- YAML hash format becomes the recommended approach in updated documentation
-- JSON string format remains supported indefinitely (deprecated but maintained)
-- No new dependencies introduced (jq already required for existing JSON parsing)
-- Minimal performance impact (<10ms for format detection and conversion)
+- This is a **documentation and configuration enhancement**, not a code rewrite
+- Key insight from research needed: How does Bitrise serialize YAML hashes?
+- No new external dependencies required (jq already handles JSON validation)
+- Minimal code changes expected based on Bitrise serialization behavior
+- Primary work is in step.yml documentation, examples, and test workflows
