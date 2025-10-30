@@ -58,7 +58,7 @@ workflows:
 
 ### Custom Permissions (Least-Privilege)
 
-Restrict the token to specific permissions:
+Restrict the token to specific permissions using YAML hash format:
 
 ```yaml
 workflows:
@@ -69,7 +69,9 @@ workflows:
         - app_id: $GITHUB_APP_ID
         - installation_id: $GITHUB_INSTALLATION_ID
         - private_pem: $GITHUB_APP_PRIVATE_PEM
-        - permissions: '{"contents":"read","checks":"write"}'
+        - permissions:
+            contents: read
+            checks: write
     - script:
         inputs:
         - content: |
@@ -85,7 +87,7 @@ workflows:
 | `app_id` | GitHub App ID (numeric) | Yes | - |
 | `installation_id` | GitHub App Installation ID (numeric) | Yes | - |
 | `private_pem` | RSA private key in PEM format | Yes | - |
-| `permissions` | JSON object to restrict permissions | No | All app permissions |
+| `permissions` | YAML hash to restrict permissions | No | All app permissions |
 
 ## Outputs
 
@@ -152,14 +154,20 @@ workflows:
 2. Check the app's permissions in GitHub settings
 3. Ensure the installation hasn't been suspended
 
-### Error: "Invalid permissions format: must be valid JSON"
+### Error: "Invalid permissions format"
 
-**Cause**: The `permissions` input contains invalid JSON syntax.
+**Cause**: The `permissions` input contains invalid syntax or Bitrise cannot serialize it.
 
 **Solution**:
-- Use valid JSON format: `'{"contents":"read","issues":"write"}'`
-- Check for missing quotes, commas, or brackets
-- Test your JSON with a validator like `jq`
+- Use YAML hash format:
+  ```yaml
+  - permissions:
+      contents: read
+      issues: write
+  ```
+- Check for correct YAML indentation (2 spaces per level)
+- Ensure permission names are valid (see GitHub API docs)
+- Test your workflow with `bitrise run test`
 
 ### Error: "GitHub API unavailable after retry (HTTP 503)"
 

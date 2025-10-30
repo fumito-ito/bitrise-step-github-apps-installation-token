@@ -70,13 +70,15 @@ workflows:
         - is_create_path: true
     - path::./:
         title: Generate token with custom permissions
-        description: Test token generation with restricted permissions
+        description: Test token generation with restricted permissions (YAML hash format)
         run_if: true
         inputs:
         - app_id: $GITHUB_APP_ID
         - installation_id: $GITHUB_INSTALLATION_ID
         - private_pem: $GITHUB_APP_PRIVATE_PEM
-        - permissions: '{"contents":"read","metadata":"read"}'
+        - permissions:
+            contents: read
+            metadata: read
     - script:
         title: Verify token and check permissions
         inputs:

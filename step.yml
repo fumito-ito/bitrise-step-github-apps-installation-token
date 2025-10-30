@@ -101,16 +101,29 @@ inputs:
   - permissions:
     opts:
       title: "Custom Permissions (Optional)"
-      summary: "Restrict token to specific permissions"
+      summary: "Restrict token to specific permissions (YAML hash format)"
       description: |
-        Optional JSON object to restrict the installation token to specific permissions.
-        Format: {"resource": "access_level", ...}
-        Example: {"contents": "read", "issues": "write"}
+        Optional permissions to restrict the installation token scope.
+
+        Use YAML hash format (recommended):
+          permissions:
+            contents: read
+            issues: write
 
         If omitted, the token will have all permissions configured for your app.
-        Requested permissions must be a subset of your app's configured permissions.
+
+        Common permissions:
+        - contents: Repository contents (read/write)
+        - issues: Issues and comments (read/write)
+        - pull_requests: Pull requests (read/write)
+        - metadata: Repository metadata (read only)
+        - checks: Checks on code (read/write)
+
+        See GitHub documentation for full permission list:
+        https://docs.github.com/en/rest/apps/apps#create-an-installation-access-token-for-an-app
       is_required: false
       is_sensitive: false
+      is_expand: false
 
 outputs:
   - GITHUB_APPS_INSTALLATION_TOKEN:

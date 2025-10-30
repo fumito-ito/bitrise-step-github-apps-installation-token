@@ -408,7 +408,9 @@ main() {
   if [ -n "$permissions" ]; then
     # Validate JSON format
     if ! echo "$permissions" | jq empty 2>/dev/null; then
-      echo "Error: Invalid permissions format: must be valid JSON" >&2
+      echo "Error: Invalid permissions format" >&2
+      echo "Expected: YAML hash (e.g., contents: read) or valid JSON string" >&2
+      echo "Received: $permissions" >&2
       exit $EXIT_VALIDATION_ERROR
     fi
     permissions_json="{\"permissions\":${permissions}}"
