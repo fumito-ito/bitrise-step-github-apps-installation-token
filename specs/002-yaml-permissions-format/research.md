@@ -32,10 +32,10 @@ How does Bitrise serialize YAML hash inputs when passing them to shell scripts a
     metadata: read
 ```
 
-Bitrise serializes this to a JSON string before passing to the environment variable:
+Bitrise serializes this to a **Go map string representation** before passing to the environment variable:
 
 ```bash
-permissions='{"contents":"read","metadata":"read"}'
+permissions='map[contents:read metadata:read]'
 ```
 
 **Compared to legacy JSON string format**:
@@ -50,30 +50,29 @@ This becomes:
 permissions='{"contents":"read","metadata":"read"}'
 ```
 
-**Result**: Both formats end up as identical JSON strings in the environment variable!
+**Result**: The formats are DIFFERENT in the environment variable - YAML hashes become Go map strings, while JSON strings remain as JSON!
 
 ### Decision
 
-**Format Detection Strategy**: Since Bitrise serializes YAML hashes to JSON strings, we cannot reliably detect the original format from the environment variable alone. However, this is actually **beneficial** because:
+**Format Detection Strategy**: We MUST detect and handle both formats differently:
 
-1. **No format detection needed** - Both formats are already JSON strings
-2. **Existing code works** - Current JSON parsing logic handles both cases
-3. **step.yml change only** - Remove `is_expand: true` to prevent double-expansion of curly braces
+1. **Go map format** (`map[key:value ...]`) - Parse and convert to JSON
+2. **JSON string format** (`{"key":"value"}`) - Use directly
 
-**Implementation**: The only change needed is in step.yml configuration, not in step.sh logic.
+**Implementation**: step.sh must check if the value matches Go map format pattern and convert it to JSON before validation.
 
 ### Rationale
 
-- Bitrise's automatic serialization eliminates the need for complex format detection
-- No bash parsing of YAML required (jq already handles JSON)
-- Simpler implementation with less error-prone code
-- Backward compatibility guaranteed (same internal representation)
+- Go map format detection is simple using regex pattern matching (`^map\[.*\]$`)
+- Conversion from Go map to JSON is straightforward string parsing
+- Backward compatibility maintained (existing JSON strings still work)
+- No external dependencies needed (pure bash implementation)
 
 ### Alternatives Considered
 
 - **Manual YAML parsing in bash**: Complex, error-prone, requires additional dependencies (yq or python)
-- **Environment variable introspection**: Unreliable, Bitrise's serialization happens before shell access
-- **Dual code paths for YAML vs JSON**: Unnecessary complexity, both are JSON strings internally
+- **Ignore YAML hash format**: Would not meet the feature requirement
+- **Require JSON string only**: Would force users to continue using less readable format
 
 ### References
 
@@ -184,34 +183,43 @@ fi
 
 ### Decision
 
-**No changes needed to validation logic**. The existing `jq empty` check validates:
-- JSON syntax correctness
-- Proper quoting and escaping
-- Structural validity
+**Convert Go map to JSON, then validate**. The validation strategy is:
 
-**Enhanced Error Messages**: Update error messages to acknowledge both formats:
+1. **Detect format**: Check if value matches `map[...]` pattern
+2. **Convert if needed**: Parse Go map format and convert to JSON object
+3. **Validate**: Use existing `jq empty` check for JSON syntax validation
+
+**Implementation**:
 
 ```bash
-if ! echo "$permissions" | jq empty 2>/dev/null; then
-  echo "Error: Invalid permissions format" >&2
-  echo "Expected: YAML hash (e.g., contents: read) or valid JSON string" >&2
-  echo "Received: $permissions" >&2
-  exit $EXIT_VALIDATION_ERROR
+if [[ "$permissions" =~ ^map\[.*\]$ ]]; then
+  # Convert Go map format to JSON
+  # Extract key:value pairs from "map[key1:value1 key2:value2]"
+  # Build JSON object: {"key1":"value1","key2":"value2"}
+else
+  # Already JSON format - validate directly
+  if ! echo "$permissions" | jq empty 2>/dev/null; then
+    echo "Error: Invalid permissions format" >&2
+    echo "Expected: YAML hash (e.g., contents: read) or valid JSON string" >&2
+    echo "Received: $permissions" >&2
+    exit $EXIT_VALIDATION_ERROR
+  fi
 fi
 ```
 
 ### Rationale
 
-- Existing validation is sufficient (both formats are JSON strings internally)
+- Go map format is easily detectable with regex pattern
+- Conversion to JSON maintains existing validation flow
 - Enhanced error messages provide better user guidance
-- No performance impact (same jq validation)
+- No performance impact (minimal string parsing)
 - Maintains fail-fast behavior
 
 ### Alternatives Considered
 
-- **Separate validation for YAML and JSON**: Unnecessary, both are JSON strings
+- **Skip validation for Go map format**: Risky, could send invalid data to API
+- **Use external tool (yq) for parsing**: Adds dependency, overkill for simple map format
 - **Additional permission name validation**: Deferred to GitHub API (existing behavior)
-- **Access level validation (read/write only)**: Could be added, but GitHub API already validates this
 
 ### References
 
@@ -371,25 +379,25 @@ test-permissions-comparison:
 
 | Research Area | Decision | Rationale |
 |---------------|----------|-----------|
-| **Format Detection** | No detection needed - Bitrise serializes both to JSON | Simplifies implementation, both formats identical internally |
+| **Format Detection** | Detect Go map format with regex, convert to JSON | YAML hashes become Go map strings, must be converted |
 | **step.yml Config** | Set `is_expand: false`, update descriptions to show both formats | Prevents variable expansion, clear user guidance |
-| **Validation** | Keep existing `jq empty` check, enhance error messages | Already validates both formats (JSON strings internally) |
+| **Validation** | Convert Go map to JSON, then use `jq empty` check | Maintains existing validation flow with format conversion |
 | **Documentation** | YAML hash as primary, JSON string as legacy/supported | Promotes better UX while maintaining compatibility |
 | **Testing** | Add workflows for both formats, verify equivalence | Ensures backward compatibility and functional parity |
 
 ## Implementation Impact
 
-**Code Changes**: Minimal
+**Code Changes**: Moderate
 - step.yml: Update description, set `is_expand: false`
 - README.md: Update examples to show YAML hash first
-- bitrise.yml: Add test workflows for YAML hash format
-- step.sh: Update error messages (optional, for clarity)
+- bitrise.yml: Update test workflows to use YAML hash format
+- step.sh: Add Go map detection and conversion logic, update error messages
 
 **No Changes Needed**:
-- Permissions parsing logic (already handles JSON strings)
-- Validation logic (jq works for both formats)
+- Validation logic (jq still validates JSON after conversion)
 - GitHub API integration (receives JSON regardless of input format)
-- Security measures (both formats handled identically)
+- Security measures (both formats converted to JSON before use)
+- Exit codes (same error handling for invalid formats)
 
 **User Impact**: Positive
 - Better developer experience (more readable workflow files)

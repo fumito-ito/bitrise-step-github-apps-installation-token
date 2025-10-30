@@ -406,14 +406,44 @@ main() {
   # Prepare permissions JSON if provided
   local permissions_json=""
   if [ -n "$permissions" ]; then
-    # Validate JSON format
-    if ! echo "$permissions" | jq empty 2>/dev/null; then
-      echo "Error: Invalid permissions format" >&2
-      echo "Expected: YAML hash (e.g., contents: read) or valid JSON string" >&2
-      echo "Received: $permissions" >&2
-      exit $EXIT_VALIDATION_ERROR
+    # Check if permissions is a Go map format (e.g., "map[key:value ...]")
+    # Bitrise passes YAML hashes as Go map string representations
+    if [[ "$permissions" =~ ^map\[.*\]$ ]]; then
+      # Convert Go map format to JSON
+      # Extract key:value pairs from "map[key1:value1 key2:value2]"
+      local map_content="${permissions#map[}"  # Remove "map[" prefix
+      map_content="${map_content%]}"           # Remove "]" suffix
+
+      # Build JSON object from key:value pairs
+      local json_obj="{"
+      local first=true
+      while IFS=: read -r key value; do
+        # Trim whitespace
+        key=$(echo "$key" | xargs)
+        value=$(echo "$value" | xargs)
+
+        if [ -n "$key" ] && [ -n "$value" ]; then
+          if [ "$first" = false ]; then
+            json_obj+=","
+          fi
+          json_obj+="\"$key\":\"$value\""
+          first=false
+        fi
+      done < <(echo "$map_content" | tr ' ' '\n')
+      json_obj+="}"
+
+      permissions_json="{\"permissions\":${json_obj}}"
+    else
+      # Assume it's already JSON format (for backward compatibility or direct JSON input)
+      # Validate JSON format
+      if ! echo "$permissions" | jq empty 2>/dev/null; then
+        echo "Error: Invalid permissions format" >&2
+        echo "Expected: YAML hash (e.g., contents: read) or valid JSON string" >&2
+        echo "Received: $permissions" >&2
+        exit $EXIT_VALIDATION_ERROR
+      fi
+      permissions_json="{\"permissions\":${permissions}}"
     fi
-    permissions_json="{\"permissions\":${permissions}}"
   fi
 
   # Call GitHub API with retry logic
