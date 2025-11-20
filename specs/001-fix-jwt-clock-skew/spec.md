@@ -50,7 +50,7 @@ When token generation fails due to clock-related issues, users receive clear dia
 
 ### Edge Cases
 
-- **Drastic clock errors**: System MUST detect when the local clock differs from a reasonable time range (>1 hour variance) and fail with a clear error message indicating system time misconfiguration before attempting JWT generation
+- **Extreme clock errors**: System MUST detect when the local clock differs from a reasonable time range (>1 hour variance) and fail with a clear error message indicating system time misconfiguration before attempting JWT generation
 - **Time zone handling**: All timestamps (iat, exp) MUST be generated using UTC (Coordinated Universal Time) per JWT standard (RFC 7519); local time zones are not considered
 - **Timestamp retrieval failure**: If UTC timestamp cannot be retrieved from the system, the step MUST abort immediately with a clear error message indicating the system time access failure and suggesting environment diagnostics
 - **Leap seconds and DST**: By using UTC and Unix epoch seconds per RFC 7519, leap seconds and daylight saving time transitions are automatically handled correctly without additional processing; no special logic required
