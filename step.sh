@@ -49,6 +49,10 @@ readonly EXIT_VALIDATION_ERROR=1
 readonly EXIT_API_ERROR=2
 readonly EXIT_ENVMAN_ERROR=3
 
+# Clock validation constants (for detecting extreme clock errors)
+readonly MIN_VALID_EPOCH=1577836800  # 2020-01-01 00:00:00 UTC
+readonly MAX_VALID_EPOCH=4102444800  # 2100-01-01 00:00:00 UTC
+
 # Global variables for cleanup
 TEMP_PEM_FILE=""
 
@@ -152,6 +156,40 @@ validate_pem() {
   fi
 }
 
+# Get current UTC timestamp in Unix epoch seconds
+get_utc_timestamp() {
+  local timestamp
+  timestamp=$(date -u +%s 2>&1) || {
+    echo "Error: Failed to execute 'date -u +%s' command" >&2
+    echo "System time utilities may be misconfigured" >&2
+    return 1
+  }
+
+  if [ -z "$timestamp" ] || ! [[ "$timestamp" =~ ^[0-9]+$ ]]; then
+    echo "Error: 'date -u +%s' returned invalid output: '$timestamp'" >&2
+    return 1
+  fi
+
+  echo "$timestamp"
+}
+
+# Validate UTC timestamp is within reasonable range
+validate_utc_timestamp() {
+  local timestamp="$1"
+
+  if [ "$timestamp" -lt "$MIN_VALID_EPOCH" ]; then
+    echo "Error: System clock appears to be incorrect (timestamp: $timestamp)" >&2
+    echo "Current time is before 2020-01-01. Please verify system time is set correctly." >&2
+    exit $EXIT_VALIDATION_ERROR
+  fi
+
+  if [ "$timestamp" -gt "$MAX_VALID_EPOCH" ]; then
+    echo "Error: System clock appears to be incorrect (timestamp: $timestamp)" >&2
+    echo "Current time is after 2100-01-01. Please verify system time is set correctly." >&2
+    exit $EXIT_VALIDATION_ERROR
+  fi
+}
+
 # ==============================================================================
 # JWT Generation Functions
 # ==============================================================================
@@ -161,13 +199,13 @@ create_jwt_header() {
   echo -n '{"alg":"RS256","typ":"JWT"}' | base64url_encode
 }
 
-# Create JWT payload with iat/exp/iss claims (T013)
+# Create JWT payload with iat/exp/iss claims
+# Clock skew fix: Uses UTC time and 5-minute expiration for safety margin
 create_jwt_payload() {
   local app_id="$1"
-  local now
-  now=$(date +%s)
-  local iat=$((now - 60))  # Issued 60 seconds ago (clock drift protection)
-  local exp=$((now + 600)) # Expires in 600 seconds (10 minutes)
+  local iat
+  iat=$(get_utc_timestamp) || exit $EXIT_VALIDATION_ERROR
+  local exp=$((iat + 300))  # Expires in 300 seconds (5 minutes) - conservative for clock skew tolerance
 
   echo -n "{\"iat\":${iat},\"exp\":${exp},\"iss\":\"${app_id}\"}" | base64url_encode
 }
@@ -196,12 +234,17 @@ sign_jwt() {
   echo -n "$data" | openssl dgst -sha256 -sign "$pem_file" | base64url_encode
 }
 
-# Generate complete JWT (header.payload.signature) (T016)
+# Generate complete JWT (header.payload.signature)
 generate_jwt() {
   local app_id="$1"
   local pem_content="$2"
 
-  # Disable command echoing for sensitive operations (T022)
+  # Validate system clock before JWT generation (clock skew fix)
+  local current_time
+  current_time=$(get_utc_timestamp) || exit $EXIT_VALIDATION_ERROR
+  validate_utc_timestamp "$current_time"
+
+  # Disable command echoing for sensitive operations
   set +x
 
   # Create header and payload

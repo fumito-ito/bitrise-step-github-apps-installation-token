@@ -25,11 +25,11 @@ This is a single-file Bitrise step project:
 
 **Purpose**: Analyze existing code and prepare for modifications
 
-- [ ] T001 Review existing JWT generation logic in step.sh (lines 165-234, functions: create_jwt_payload, generate_jwt)
-- [ ] T002 Identify current exp calculation location in step.sh:create_jwt_payload() function
-- [ ] T003 Review existing error handling patterns in step.sh (functions: handle_api_error, validate_*)
+- [x] T001 Review existing JWT generation logic in step.sh (lines 165-234, functions: create_jwt_payload, generate_jwt)
+- [x] T002 Identify current exp calculation location in step.sh:create_jwt_payload() function
+- [x] T003 Review existing error handling patterns in step.sh (functions: handle_api_error, validate_*)
 
-**Checkpoint**: Understanding of current implementation complete
+**Checkpoint**: ✅ Understanding of current implementation complete
 
 ---
 
@@ -39,11 +39,11 @@ This is a single-file Bitrise step project:
 
 **⚠️ CRITICAL**: These functions MUST be complete before any user story implementation
 
-- [ ] T004 Add MIN_VALID_EPOCH and MAX_VALID_EPOCH constants at top of step.sh (after readonly declarations, ~line 50)
-- [ ] T005 Create get_utc_timestamp() function in step.sh after validate_pem() function (~line 160)
-- [ ] T006 Create validate_utc_timestamp() function in step.sh after get_utc_timestamp() function
+- [x] T004 Add MIN_VALID_EPOCH and MAX_VALID_EPOCH constants at top of step.sh (after readonly declarations, ~line 50)
+- [x] T005 Create get_utc_timestamp() function in step.sh after validate_pem() function (~line 160)
+- [x] T006 Create validate_utc_timestamp() function in step.sh after get_utc_timestamp() function
 
-**Checkpoint**: UTC time infrastructure ready - user story implementation can begin
+**Checkpoint**: ✅ UTC time infrastructure ready - user story implementation can begin
 
 ---
 
@@ -55,19 +55,19 @@ This is a single-file Bitrise step project:
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Modify create_jwt_payload() function in step.sh to call get_utc_timestamp() for iat value
-- [ ] T008 [US1] Modify create_jwt_payload() function in step.sh to change exp calculation from iat+600 to iat+300
-- [ ] T009 [US1] Add validate_utc_timestamp() call in generate_jwt() function before create_jwt_payload()
-- [ ] T010 [US1] Update JWT payload generation to ensure iat uses UTC (verify `date -u` usage in get_utc_timestamp)
-- [ ] T011 [US1] Verify exp-iat constraint (300 seconds) in generate_jwt() function after payload creation
+- [x] T007 [US1] Modify create_jwt_payload() function in step.sh to call get_utc_timestamp() for iat value
+- [x] T008 [US1] Modify create_jwt_payload() function in step.sh to change exp calculation from iat+600 to iat+300
+- [x] T009 [US1] Add validate_utc_timestamp() call in generate_jwt() function before create_jwt_payload()
+- [x] T010 [US1] Update JWT payload generation to ensure iat uses UTC (verify `date -u` usage in get_utc_timestamp)
+- [x] T011 [US1] Verify exp-iat constraint (300 seconds) in generate_jwt() function after payload creation
 
 **Verification Checklist for US1**:
-- [ ] JWT exp = iat + 300 (not 600)
-- [ ] iat value comes from `date -u +%s` (UTC, not local time)
-- [ ] Timestamp validation occurs before JWT generation
-- [ ] Extreme clock errors (>1 hour) detected and reported
+- [x] JWT exp = iat + 300 (not 600)
+- [x] iat value comes from `date -u +%s` (UTC, not local time)
+- [x] Timestamp validation occurs before JWT generation
+- [x] Extreme clock errors (>1 hour) detected and reported
 
-**Checkpoint**: User Story 1 complete - token generation works with ±5 minute clock skew
+**Checkpoint**: ✅ User Story 1 complete - token generation works with ±5 minute clock skew
 
 ---
 
