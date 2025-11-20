@@ -79,26 +79,26 @@ This is a single-file Bitrise step project:
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Store jwt_iat and jwt_exp values in generate_jwt() function after payload creation
-- [ ] T013 [US2] Pass jwt_iat and jwt_exp to call_github_api() function (modify function signature)
-- [ ] T014 [US2] Modify handle_api_error() function in step.sh to accept jwt_iat and jwt_exp parameters
-- [ ] T015 [US2] Add diagnostic logging block in handle_api_error() for 401 errors with format:
+- [x] T012 [US2] Store jwt_iat and jwt_exp values in generate_jwt() function after payload creation
+- [x] T013 [US2] Pass jwt_iat and jwt_exp to call_github_api() function (modify function signature)
+- [x] T014 [US2] Modify handle_api_error() function in step.sh to accept jwt_iat and jwt_exp parameters
+- [x] T015 [US2] Add diagnostic logging block in handle_api_error() for 401 errors with format:
   ```
   JWT timing info (UTC epoch seconds):
     Issued at (iat): $jwt_iat
     Expires at (exp): $jwt_exp
     Current time: $(date -u +%s)
   ```
-- [ ] T016 [US2] Verify no JWT token string is logged (only iat/exp numeric values)
-- [ ] T017 [US2] Add "Possible causes: clock skew, expired JWT, or invalid credentials" hint to 401 error message
+- [x] T016 [US2] Verify no JWT token string is logged (only iat/exp numeric values)
+- [x] T017 [US2] Add "Possible causes: clock skew, expired JWT, or invalid credentials" hint to 401 error message
 
 **Verification Checklist for US2**:
-- [ ] 401 errors display iat, exp, current_time
-- [ ] All timing values are UTC epoch seconds
-- [ ] No JWT token string appears in logs
-- [ ] Error message provides actionable guidance
+- [x] 401 errors display iat, exp, current_time
+- [x] All timing values are UTC epoch seconds
+- [x] No JWT token string appears in logs
+- [x] Error message provides actionable guidance
 
-**Checkpoint**: User Story 2 complete - clear diagnostics for troubleshooting
+**Checkpoint**: ✅ User Story 2 complete - clear diagnostics for troubleshooting
 
 ---
 

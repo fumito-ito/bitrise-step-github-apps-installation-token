@@ -56,6 +56,10 @@ readonly MAX_VALID_EPOCH=4102444800  # 2100-01-01 00:00:00 UTC
 # Global variables for cleanup
 TEMP_PEM_FILE=""
 
+# Global variables for JWT diagnostics (T012)
+JWT_IAT=""
+JWT_EXP=""
+
 # ==============================================================================
 # Utility Functions
 # ==============================================================================
@@ -64,6 +68,21 @@ TEMP_PEM_FILE=""
 # Removes newlines, replaces +/ with -_, removes padding =
 base64url_encode() {
   base64 | tr -d '\n' | tr '+/' '-_' | tr -d '='
+}
+
+# Base64url decoding (RFC 4648 Section 5)
+# Reverses base64url encoding: -_ to +/, adds padding, then decodes
+base64url_decode() {
+  local input
+  input=$(cat)
+  # Replace -_ with +/
+  input=$(echo "$input" | tr '_-' '/+')
+  # Add padding if needed (base64 requires length to be multiple of 4)
+  local padding=$((4 - ${#input} % 4))
+  if [ "$padding" -ne 4 ]; then
+    input="${input}$(printf '=%.0s' $(seq 1 $padding))"
+  fi
+  echo "$input" | base64 -d
 }
 
 # ==============================================================================
@@ -235,6 +254,7 @@ sign_jwt() {
 }
 
 # Generate complete JWT (header.payload.signature)
+# Returns: JWT token on stdout, sets JWT_IAT and JWT_EXP global variables for diagnostics
 generate_jwt() {
   local app_id="$1"
   local pem_content="$2"
@@ -252,6 +272,13 @@ generate_jwt() {
   local payload
   header=$(create_jwt_header)
   payload=$(create_jwt_payload "$app_id")
+
+  # Extract iat and exp from payload for diagnostic logging (T012)
+  # Decode base64url payload to get JWT claims
+  local decoded_payload
+  decoded_payload=$(echo "$payload" | base64url_decode)
+  JWT_IAT=$(echo "$decoded_payload" | jq -r '.iat')
+  JWT_EXP=$(echo "$decoded_payload" | jq -r '.exp')
 
   # Create temporary PEM file
   local pem_file
@@ -394,6 +421,21 @@ handle_api_error() {
     401)
       echo "Error: Authentication failed (HTTP 401): Invalid JWT or App ID" >&2
       echo "Details: ${error_message}" >&2
+
+      # Diagnostic logging for JWT timing (T015)
+      if [ -n "$JWT_IAT" ] && [ -n "$JWT_EXP" ]; then
+        echo "" >&2
+        echo "JWT timing info (UTC epoch seconds):" >&2
+        echo "  Issued at (iat): $JWT_IAT" >&2
+        echo "  Expires at (exp): $JWT_EXP" >&2
+        echo "  Current time: $(date -u +%s)" >&2
+        echo "" >&2
+      fi
+
+      # Actionable error guidance (T017)
+      echo "Possible causes: clock skew, expired JWT, or invalid credentials" >&2
+      echo "Verify: App ID, Installation ID, and system clock settings" >&2
+
       exit $EXIT_API_ERROR
       ;;
     404)
