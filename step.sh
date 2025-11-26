@@ -80,7 +80,13 @@ base64url_decode() {
   # Add padding if needed (base64 requires length to be multiple of 4)
   local padding=$((4 - ${#input} % 4))
   if [ "$padding" -ne 4 ]; then
-    input="${input}$(printf '=%.0s' $(seq 1 $padding))"
+    local pad=""
+    local i=0
+    while [ $i -lt $padding ]; do
+      pad="${pad}="
+      i=$((i + 1))
+    done
+    input="${input}${pad}"
   fi
   echo "$input" | base64 -d
 }
