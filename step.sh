@@ -290,9 +290,9 @@ generate_jwt() {
   # Extract iat and exp from payload for diagnostic logging (T012)
   # Decode base64url payload to get JWT claims
   local decoded_payload
-  decoded_payload=$(echo "$payload" | base64url_decode)
-  JWT_IAT=$(echo "$decoded_payload" | jq -r '.iat')
-  JWT_EXP=$(echo "$decoded_payload" | jq -r '.exp')
+  decoded_payload=$(echo "$payload" | base64url_decode) || { echo "Error: Failed to decode JWT payload for diagnostics" >&2; }
+  JWT_IAT=$(echo "$decoded_payload" | jq -r '.iat') || { echo "Error: Failed to parse 'iat' from JWT payload for diagnostics" >&2; }
+  JWT_EXP=$(echo "$decoded_payload" | jq -r '.exp') || { echo "Error: Failed to parse 'exp' from JWT payload for diagnostics" >&2; }
 
   # Create temporary PEM file
   local pem_file
