@@ -233,6 +233,12 @@ create_jwt_payload() {
   iat=$(get_utc_timestamp) || exit $EXIT_VALIDATION_ERROR
   local exp=$((iat + 300))  # Expires in 300 seconds (5 minutes) - conservative for clock skew tolerance
 
+  # Explicitly enforce GitHub's maximum allowed expiration (10 minutes)
+  if [ "$exp" -gt $((iat + 600)) ]; then
+    echo "Error: JWT expiration (exp) exceeds GitHub's maximum allowed value (iat + 600 seconds)." >&2
+    exit $EXIT_VALIDATION_ERROR
+  fi
+
   echo -n "{\"iat\":${iat},\"exp\":${exp},\"iss\":\"${app_id}\"}" | base64url_encode
 }
 
