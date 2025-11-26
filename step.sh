@@ -88,7 +88,7 @@ base64url_decode() {
     done
     input="${input}${pad}"
   fi
-  echo "$input" | base64 -d
+  printf '%s' "$input" | base64 -d
 }
 
 # ==============================================================================
