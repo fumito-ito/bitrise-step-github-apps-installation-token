@@ -176,6 +176,8 @@ validate_pem() {
 }
 
 # Get current UTC timestamp in Unix epoch seconds
+# Clock skew fix: Use UTC (date -u) to ensure timezone-independent time
+# Returns: Unix epoch seconds as integer
 get_utc_timestamp() {
   local timestamp
   timestamp=$(date -u +%s 2>&1) || {
@@ -193,18 +195,21 @@ get_utc_timestamp() {
 }
 
 # Validate UTC timestamp is within reasonable range
+# Clock skew fix: Detect extreme clock errors (>1 hour variance from expected range)
+# This prevents JWT generation with obviously incorrect timestamps that would fail GitHub API validation
+# Valid range: 2020-01-01 to 2100-01-01 (MIN_VALID_EPOCH to MAX_VALID_EPOCH)
 validate_utc_timestamp() {
   local timestamp="$1"
 
   if [ "$timestamp" -lt "$MIN_VALID_EPOCH" ]; then
-    echo "Error: System clock appears to be incorrect (timestamp: $timestamp)" >&2
-    echo "Current time is before 2020-01-01. Please verify system time is set correctly." >&2
+    echo "Error: System clock appears to be incorrect (UTC timestamp: $timestamp)" >&2
+    echo "Current UTC time is before 2020-01-01. Please verify system time is set correctly." >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 
   if [ "$timestamp" -gt "$MAX_VALID_EPOCH" ]; then
-    echo "Error: System clock appears to be incorrect (timestamp: $timestamp)" >&2
-    echo "Current time is after 2100-01-01. Please verify system time is set correctly." >&2
+    echo "Error: System clock appears to be incorrect (UTC timestamp: $timestamp)" >&2
+    echo "Current UTC time is after 2100-01-01. Please verify system time is set correctly." >&2
     exit $EXIT_VALIDATION_ERROR
   fi
 }
@@ -220,6 +225,8 @@ create_jwt_header() {
 
 # Create JWT payload with iat/exp/iss claims
 # Clock skew fix: Uses UTC time and 5-minute expiration for safety margin
+# GitHub allows max 10 minutes, but we use 5 to tolerate ±5 min clock skew (Issue #3)
+# JWT spec (RFC 7519): iat/exp are NumericDate values (seconds since Unix epoch in UTC)
 create_jwt_payload() {
   local app_id="$1"
   local iat

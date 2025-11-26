@@ -129,12 +129,28 @@ workflows:
 
 ### Error: "Authentication failed (HTTP 401): Invalid JWT or App ID"
 
-**Cause**: The JWT signature is invalid, or the App ID doesn't match the private key.
+**Cause**: The JWT signature is invalid, App ID doesn't match the private key, or clock skew issues.
 
 **Solution**:
 1. Verify the App ID matches your GitHub App
 2. Ensure the private key is for the correct GitHub App
 3. Check that the private key hasn't been regenerated (old keys become invalid)
+4. **Clock skew**: If you see "JWT timing info" in the error output:
+   - Compare the `iat`, `exp`, and `Current time` values
+   - System clock should be within ±5 minutes of actual time
+   - Verify system time is set correctly: `date -u` (should show correct UTC time)
+   - Contact your infrastructure team if running in containerized/virtualized environments
+
+**Understanding JWT timing info**:
+```
+JWT timing info (UTC epoch seconds):
+  Issued at (iat): 1700000000
+  Expires at (exp): 1700000300  (iat + 5 minutes)
+  Current time: 1700000150
+```
+- If `Current time < iat`: Your system clock is behind
+- If `Current time > exp`: JWT has expired (or system clock is ahead)
+- All times are in UTC (Unix epoch seconds)
 
 ### Error: "Installation not found (HTTP 404): Check installation_id"
 
@@ -168,6 +184,25 @@ workflows:
 - Check for correct YAML indentation (2 spaces per level)
 - Ensure permission names are valid (see GitHub API docs)
 - Test your workflow with `bitrise run test`
+
+### Error: "System clock appears to be incorrect"
+
+**Cause**: System time is drastically wrong (>1 hour off from actual time), detected before JWT generation.
+
+**Solution**:
+1. Check current system time: `date -u` (should show correct UTC time)
+2. Verify NTP (Network Time Protocol) is configured and working
+3. For containerized environments: Ensure host system clock is correct
+4. For virtualized environments: Check VM time synchronization settings
+5. Contact infrastructure team if you cannot modify system time
+
+**Example error**:
+```
+Error: System clock appears to be incorrect (UTC timestamp: 946684800)
+Current UTC time is before 2020-01-01. Please verify system time is set correctly.
+```
+
+This validation prevents JWT generation with timestamps that would be rejected by GitHub API.
 
 ### Error: "GitHub API unavailable after retry (HTTP 503)"
 

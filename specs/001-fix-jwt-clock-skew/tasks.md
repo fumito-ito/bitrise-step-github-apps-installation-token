@@ -106,18 +106,27 @@ This is a single-file Bitrise step project:
 
 **Purpose**: Final validation, documentation, and edge case handling
 
-- [ ] T018 Add comments documenting clock skew fix in step.sh (at create_jwt_payload and validate_utc_timestamp functions)
-- [ ] T019 Verify all error messages reference "UTC" where appropriate for clarity
-- [ ] T020 Review security: confirm no sensitive data (private key, JWT token) logged anywhere
-- [ ] T021 Test normal operation scenario (quickstart.md scenario 1)
-- [ ] T022 Test clock skew future scenario (quickstart.md scenario 1: +5 minutes)
-- [ ] T023 Test clock skew past scenario (quickstart.md scenario 2: -3 minutes)
-- [ ] T024 Test extreme clock error scenario (quickstart.md scenario 3: year 2000)
-- [ ] T025 Test UTC vs local time scenario (quickstart.md scenario 4: set TZ=Asia/Tokyo)
-- [ ] T026 Test 401 diagnostic logging scenario (quickstart.md scenario 6: invalid App ID)
-- [ ] T027 Verify performance benchmark (quickstart.md scenario 7: complete within 5 seconds)
-- [ ] T028 Run regression tests (quickstart.md scenario 8: existing functionality still works)
-- [ ] T029 Update README.md troubleshooting section with clock skew guidance (optional)
+- [x] T018 Add comments documenting clock skew fix in step.sh (at create_jwt_payload and validate_utc_timestamp functions)
+- [x] T019 Verify all error messages reference "UTC" where appropriate for clarity
+- [x] T020 Review security: confirm no sensitive data (private key, JWT token) logged anywhere
+- [ ] T021 Test normal operation scenario (quickstart.md scenario 1) - **Requires user execution with actual credentials**
+- [ ] T022 Test clock skew future scenario (quickstart.md scenario 1: +5 minutes) - **Requires system clock adjustment**
+- [ ] T023 Test clock skew past scenario (quickstart.md scenario 2: -3 minutes) - **Requires system clock adjustment**
+- [ ] T024 Test extreme clock error scenario (quickstart.md scenario 3: year 2000) - **Requires system clock adjustment**
+- [ ] T025 Test UTC vs local time scenario (quickstart.md scenario 4: set TZ=Asia/Tokyo) - **Requires environment setup**
+- [ ] T026 Test 401 diagnostic logging scenario (quickstart.md scenario 6: invalid App ID) - **Requires invalid credentials test**
+- [ ] T027 Verify performance benchmark (quickstart.md scenario 7: complete within 5 seconds) - **Requires timing measurement**
+- [ ] T028 Run regression tests (quickstart.md scenario 8: existing functionality still works) - **Requires existing test suite**
+- [x] T029 Update README.md troubleshooting section with clock skew guidance (optional)
+
+**Note on Testing (T021-T028)**: These tests require:
+- Actual GitHub App credentials (App ID, Installation ID, Private Key)
+- System clock manipulation capabilities (for clock skew tests)
+- Bitrise environment or proper test setup
+- See [quickstart.md](quickstart.md) for detailed test procedures
+
+**Code Implementation Status**: ✅ Complete (T001-T020, T029)
+**Testing Status**: ⏳ Pending user execution in appropriate environment (T021-T028)
 
 ---
 
