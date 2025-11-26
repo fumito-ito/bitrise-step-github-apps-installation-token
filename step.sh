@@ -278,15 +278,10 @@ generate_jwt() {
   local app_id="$1"
   local pem_content="$2"
 
-  # Validate system clock before JWT generation (clock skew fix)
-  local current_time
-  current_time=$(get_utc_timestamp) || exit $EXIT_VALIDATION_ERROR
-  validate_utc_timestamp "$current_time"
-
   # Disable command echoing for sensitive operations
   set +x
 
-  # Create header and payload
+  # Create header and payload (validation is handled in create_jwt_payload)
   local header
   local payload
   header=$(create_jwt_header)
