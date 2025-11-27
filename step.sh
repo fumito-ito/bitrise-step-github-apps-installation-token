@@ -294,7 +294,7 @@ generate_jwt() {
   local decoded_payload
   if decoded_payload=$(echo "$payload" | base64url_decode 2>/dev/null); then
     JWT_IAT=$(echo "$decoded_payload" | jq -r '.iat' 2>/dev/null) || JWT_IAT=""
-    JWT_EXP=$(echo "$decoded_payload" | jq -r '.exp' 2>/dev/null) || JWT_EXP=""
+    JWT_EXP=$(printf '%s' "$decoded_payload" | jq -r '.exp' 2>/dev/null) || JWT_EXP=""
   else
     echo "Warning: Failed to decode JWT payload for diagnostics (JWT generation will continue)" >&2
     JWT_IAT=""
