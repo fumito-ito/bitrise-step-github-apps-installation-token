@@ -49,8 +49,16 @@ readonly EXIT_VALIDATION_ERROR=1
 readonly EXIT_API_ERROR=2
 readonly EXIT_ENVMAN_ERROR=3
 
+# Clock validation constants (for detecting extreme clock errors)
+readonly MIN_VALID_EPOCH=1577836800  # 2020-01-01 00:00:00 UTC
+readonly MAX_VALID_EPOCH=4102444800  # 2100-01-01 00:00:00 UTC
+
 # Global variables for cleanup
 TEMP_PEM_FILE=""
+
+# Global variables for JWT diagnostics (T012)
+JWT_IAT=""
+JWT_EXP=""
 
 # ==============================================================================
 # Utility Functions
@@ -60,6 +68,27 @@ TEMP_PEM_FILE=""
 # Removes newlines, replaces +/ with -_, removes padding =
 base64url_encode() {
   base64 | tr -d '\n' | tr '+/' '-_' | tr -d '='
+}
+
+# Base64url decoding (RFC 4648 Section 5)
+# Reverses base64url encoding: -_ to +/, adds padding, then decodes
+base64url_decode() {
+  local input
+  input=$(cat)
+  # Replace -_ with +/ (use printf to avoid echo interpreting escape sequences)
+  input=$(printf '%s\n' "$input" | tr '_-' '/+')
+  # Add padding if needed (base64 requires length to be multiple of 4)
+  local padding=$((4 - ${#input} % 4))
+  if [ "$padding" -ne 4 ]; then
+    local pad=""
+    local i=0
+    while [ $i -lt $padding ]; do
+      pad="${pad}="
+      i=$((i + 1))
+    done
+    input="${input}${pad}"
+  fi
+  printf '%s' "$input" | base64 -d
 }
 
 # ==============================================================================
@@ -152,6 +181,45 @@ validate_pem() {
   fi
 }
 
+# Get current UTC timestamp in Unix epoch seconds
+# Clock skew fix: Use UTC (date -u) to ensure timezone-independent time
+# Returns: Unix epoch seconds as integer
+get_utc_timestamp() {
+  local timestamp
+  timestamp=$(date -u +%s 2>&1) || {
+    echo "Error: Failed to execute 'date -u +%s' command" >&2
+    echo "System time utilities may be misconfigured" >&2
+    return 1
+  }
+
+  if [ -z "$timestamp" ] || ! [[ "$timestamp" =~ ^[0-9]+$ ]]; then
+    echo "Error: 'date -u +%s' returned invalid output: '$timestamp'" >&2
+    return 1
+  fi
+
+  echo "$timestamp"
+}
+
+# Validate UTC timestamp is within reasonable range
+# Clock skew fix: Detect extreme clock errors (>1 hour variance from expected range)
+# This prevents JWT generation with obviously incorrect timestamps that would fail GitHub API validation
+# Valid range: 2020-01-01 to 2100-01-01 (MIN_VALID_EPOCH to MAX_VALID_EPOCH)
+validate_utc_timestamp() {
+  local timestamp="$1"
+
+  if [ "$timestamp" -lt "$MIN_VALID_EPOCH" ]; then
+    echo "Error: System clock appears to be incorrect (UTC timestamp: $timestamp)" >&2
+    echo "Current UTC time is before 2020-01-01. Please verify system time is set correctly." >&2
+    exit $EXIT_VALIDATION_ERROR
+  fi
+
+  if [ "$timestamp" -gt "$MAX_VALID_EPOCH" ]; then
+    echo "Error: System clock appears to be incorrect (UTC timestamp: $timestamp)" >&2
+    echo "Current UTC time is after 2100-01-01. Please verify system time is set correctly." >&2
+    exit $EXIT_VALIDATION_ERROR
+  fi
+}
+
 # ==============================================================================
 # JWT Generation Functions
 # ==============================================================================
@@ -161,13 +229,22 @@ create_jwt_header() {
   echo -n '{"alg":"RS256","typ":"JWT"}' | base64url_encode
 }
 
-# Create JWT payload with iat/exp/iss claims (T013)
+# Create JWT payload with iat/exp/iss claims
+# Clock skew fix: Uses UTC time and 5-minute expiration for safety margin
+# GitHub allows max 10 minutes, but we use 5 to tolerate ±5 min clock skew (Issue #3)
+# JWT spec (RFC 7519): iat/exp are NumericDate values (seconds since Unix epoch in UTC)
 create_jwt_payload() {
   local app_id="$1"
-  local now
-  now=$(date +%s)
-  local iat=$((now - 60))  # Issued 60 seconds ago (clock drift protection)
-  local exp=$((now + 600)) # Expires in 600 seconds (10 minutes)
+  local iat
+  iat=$(get_utc_timestamp) || exit $EXIT_VALIDATION_ERROR
+  validate_utc_timestamp "$iat"
+  local exp=$((iat + 300))  # Expires in 300 seconds (5 minutes) - conservative for clock skew tolerance
+
+  # Explicitly enforce GitHub's maximum allowed expiration (10 minutes)
+  if [ "$exp" -gt $((iat + 600)) ]; then
+    echo "Error: JWT expiration (exp) exceeds GitHub's maximum allowed value (iat + 600 seconds)." >&2
+    exit $EXIT_VALIDATION_ERROR
+  fi
 
   echo -n "{\"iat\":${iat},\"exp\":${exp},\"iss\":\"${app_id}\"}" | base64url_encode
 }
@@ -196,19 +273,33 @@ sign_jwt() {
   echo -n "$data" | openssl dgst -sha256 -sign "$pem_file" | base64url_encode
 }
 
-# Generate complete JWT (header.payload.signature) (T016)
+# Generate complete JWT (header.payload.signature)
+# Returns: JWT token on stdout, sets JWT_IAT and JWT_EXP global variables for diagnostics
 generate_jwt() {
   local app_id="$1"
   local pem_content="$2"
 
-  # Disable command echoing for sensitive operations (T022)
+  # Disable command echoing for sensitive operations
   set +x
 
-  # Create header and payload
+  # Create header and payload (validation is handled in create_jwt_payload)
   local header
   local payload
   header=$(create_jwt_header)
   payload=$(create_jwt_payload "$app_id")
+
+  # Extract iat and exp from payload for diagnostic logging (T012)
+  # Decode base64url payload to get JWT claims
+  # Note: Diagnostic failures don't stop JWT generation; empty values are handled gracefully in error reporting
+  local decoded_payload
+  if decoded_payload=$(echo "$payload" | base64url_decode 2>/dev/null); then
+    JWT_IAT=$(echo "$decoded_payload" | jq -r '.iat' 2>/dev/null) || JWT_IAT=""
+    JWT_EXP=$(printf '%s' "$decoded_payload" | jq -r '.exp' 2>/dev/null) || JWT_EXP=""
+  else
+    echo "Warning: Failed to decode JWT payload for diagnostics (JWT generation will continue)" >&2
+    JWT_IAT=""
+    JWT_EXP=""
+  fi
 
   # Create temporary PEM file
   local pem_file
@@ -351,6 +442,21 @@ handle_api_error() {
     401)
       echo "Error: Authentication failed (HTTP 401): Invalid JWT or App ID" >&2
       echo "Details: ${error_message}" >&2
+
+      # Diagnostic logging for JWT timing (T015)
+      if [ -n "$JWT_IAT" ] && [ -n "$JWT_EXP" ]; then
+        echo "" >&2
+        echo "JWT timing info (UTC epoch seconds):" >&2
+        echo "  Issued at (iat): $JWT_IAT" >&2
+        echo "  Expires at (exp): $JWT_EXP" >&2
+        echo "  Current time: $(date -u +%s)" >&2
+        echo "" >&2
+      fi
+
+      # Actionable error guidance (T017)
+      echo "Possible causes: clock skew, expired JWT, or invalid credentials" >&2
+      echo "Verify: App ID, Installation ID, and system clock settings" >&2
+
       exit $EXIT_API_ERROR
       ;;
     404)

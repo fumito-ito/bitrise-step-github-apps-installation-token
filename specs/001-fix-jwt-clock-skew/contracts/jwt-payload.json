@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GitHub Apps JWT Payload (Clock Skew Fix)",
+  "description": "JWT payload structure for GitHub Apps authentication with 5-minute expiration to handle clock skew. Conforms to RFC 7519 and GitHub Apps API requirements.",
+  "type": "object",
+  "required": ["iat", "exp", "iss"],
+  "properties": {
+    "iat": {
+      "type": "integer",
+      "description": "Issued At time in UTC (Unix epoch seconds). Must be set to current UTC time at JWT generation.",
+      "minimum": 1577836800,
+      "maximum": 4102444800,
+      "examples": [1700000000]
+    },
+    "exp": {
+      "type": "integer",
+      "description": "Expiration time in UTC (Unix epoch seconds). MUST be exactly iat + 300 (5 minutes) to provide clock skew tolerance. GitHub enforces maximum of iat + 600.",
+      "minimum": 1577836800,
+      "maximum": 4102444800,
+      "examples": [1700000300]
+    },
+    "iss": {
+      "type": "string",
+      "description": "Issuer - GitHub App ID (numeric string from app_id environment variable)",
+      "pattern": "^[0-9]+$",
+      "examples": ["123456"]
+    }
+  },
+  "additionalProperties": false,
+
+  "definitions": {
+    "constraints": {
+      "description": "Validation constraints for JWT payload",
+      "type": "object",
+      "properties": {
+        "expDuration": {
+          "description": "exp - iat MUST equal 300 seconds (5 minutes)",
+          "const": 300
+        },
+        "maxGitHubDuration": {
+          "description": "GitHub's maximum allowed duration is 600 seconds (10 minutes)",
+          "const": 600
+        },
+        "minValidEpoch": {
+          "description": "Minimum valid epoch (2020-01-01 UTC) for clock error detection",
+          "const": 1577836800
+        },
+        "maxValidEpoch": {
+          "description": "Maximum valid epoch (2100-01-01 UTC) for clock error detection",
+          "const": 4102444800
+        }
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "iat": 1700000000,
+      "exp": 1700000300,
+      "iss": "123456",
+      "$comment": "Valid payload: exp = iat + 300 (5 minutes)"
+    },
+    {
+      "iat": 1732000000,
+      "exp": 1732000300,
+      "iss": "789012",
+      "$comment": "Valid payload: different timestamp, same 5-minute duration"
+    }
+  ],
+
+  "counterExamples": [
+    {
+      "iat": 1700000000,
+      "exp": 1700000600,
+      "iss": "123456",
+      "$comment": "INVALID: exp = iat + 600 (10 minutes, old behavior). Should be iat + 300."
+    },
+    {
+      "iat": 1700000000,
+      "exp": 1700000060,
+      "iss": "123456",
+      "$comment": "INVALID: exp = iat + 60 (1 minute). Too short, should be iat + 300."
+    },
+    {
+      "iat": 1000000000,
+      "exp": 1000000300,
+      "iss": "123456",
+      "$comment": "INVALID: iat < minValidEpoch (before 2020). System clock error."
+    },
+    {
+      "iat": 5000000000,
+      "exp": 5000000300,
+      "iss": "123456",
+      "$comment": "INVALID: iat > maxValidEpoch (after 2100). System clock error."
+    }
+  ],
+
+  "notes": {
+    "rfc7519Compliance": "This payload conforms to RFC 7519 (JSON Web Token). The 'iat' and 'exp' claims are NumericDate values (seconds since Unix epoch).",
+    "githubRequirements": "GitHub Apps API requires 'iss' to be the App ID and enforces exp - iat <= 600 seconds.",
+    "clockSkewMitigation": "By using exp = iat + 300 instead of iat + 600, we provide a 5-minute buffer for clock skew between the CI environment and GitHub servers.",
+    "utcRequirement": "All timestamps MUST be in UTC. Use 'date -u +%s' to generate iat value, never 'date +%s' (local time).",
+    "securityNote": "The JWT is signed with RS256 using the GitHub App's private key. The signature is NOT part of this payload schema."
+  }
+}
