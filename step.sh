@@ -75,8 +75,8 @@ base64url_encode() {
 base64url_decode() {
   local input
   input=$(cat)
-  # Replace -_ with +/
-  input=$(echo "$input" | tr '_-' '/+')
+  # Replace -_ with +/ (use printf to avoid echo interpreting escape sequences)
+  input=$(printf '%s\n' "$input" | tr '_-' '/+')
   # Add padding if needed (base64 requires length to be multiple of 4)
   local padding=$((4 - ${#input} % 4))
   if [ "$padding" -ne 4 ]; then
@@ -237,6 +237,7 @@ create_jwt_payload() {
   local app_id="$1"
   local iat
   iat=$(get_utc_timestamp) || exit $EXIT_VALIDATION_ERROR
+  validate_utc_timestamp "$iat"
   local exp=$((iat + 300))  # Expires in 300 seconds (5 minutes) - conservative for clock skew tolerance
 
   # Explicitly enforce GitHub's maximum allowed expiration (10 minutes)
@@ -289,10 +290,16 @@ generate_jwt() {
 
   # Extract iat and exp from payload for diagnostic logging (T012)
   # Decode base64url payload to get JWT claims
+  # Note: Diagnostic failures don't stop JWT generation; empty values are handled gracefully in error reporting
   local decoded_payload
-  decoded_payload=$(echo "$payload" | base64url_decode) || { echo "Error: Failed to decode JWT payload for diagnostics" >&2; }
-  JWT_IAT=$(echo "$decoded_payload" | jq -r '.iat') || { echo "Error: Failed to parse 'iat' from JWT payload for diagnostics" >&2; }
-  JWT_EXP=$(echo "$decoded_payload" | jq -r '.exp') || { echo "Error: Failed to parse 'exp' from JWT payload for diagnostics" >&2; }
+  if decoded_payload=$(echo "$payload" | base64url_decode 2>/dev/null); then
+    JWT_IAT=$(echo "$decoded_payload" | jq -r '.iat' 2>/dev/null) || JWT_IAT=""
+    JWT_EXP=$(echo "$decoded_payload" | jq -r '.exp' 2>/dev/null) || JWT_EXP=""
+  else
+    echo "Warning: Failed to decode JWT payload for diagnostics (JWT generation will continue)" >&2
+    JWT_IAT=""
+    JWT_EXP=""
+  fi
 
   # Create temporary PEM file
   local pem_file
